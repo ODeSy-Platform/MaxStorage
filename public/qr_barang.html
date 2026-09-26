@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="id">
+<head>\n
+
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args, lokasiId: new URLSearchParams(window.location.search).get('lokasi') })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <title>Detail Barang</title>
+  <style>
+    *{box-sizing:border-box}body{margin:0;background:#eef3f9;color:#152238;font-family:Arial,sans-serif}
+    .head{background:#183153;color:#fff;padding:17px 20px;font-size:20px;font-weight:800;box-shadow:0 2px 8px #0002}
+    .wrap{width:100%;max-width:720px;margin:auto;padding:18px}.card{width:100%;overflow:hidden;background:#fff;border:1px solid #d4dfed;border-radius:16px;box-shadow:0 10px 30px #18315318}
+    .photo{min-height:280px;background:#f5f7fa;display:flex;align-items:center;justify-content:center;border-bottom:1px solid #dbe3ef}
+    .photo img{display:block;width:100%;max-height:440px;object-fit:contain}.empty{padding:70px 20px;color:#8995a7;text-align:center;font-weight:700}
+    .info{padding:20px}.kode{font-size:34px;line-height:1;font-weight:900;color:#163b73;margin-bottom:12px}.nama{font-size:23px;line-height:1.25;font-weight:800;margin-bottom:20px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{background:#edf4ff;border:1px solid #cbdcf3;border-radius:11px;padding:13px}
+    .label{color:#52657d;font-size:14px;font-weight:900;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}.value{font-size:21px;font-weight:900;word-break:break-word}
+    .wide{grid-column:1/-1}.loading,.error{padding:70px 20px;text-align:center;font-size:18px;font-weight:700}.error{color:#b42318}
+    @media(max-width:440px){body{background:#f4f7fb}.wrap{width:94%;max-width:none;padding:10px 0 16px;zoom:.85}.head{font-size:17px;padding:12px 15px}.card{border-radius:12px;box-shadow:0 6px 18px #18315314}.photo{min-height:38vh;max-height:44vh}.photo img{height:40vh;max-height:none}.kode{font-size:25px}.nama{font-size:18px}.info{padding:15px}.grid{gap:9px}.field{padding:11px}.label{font-size:12px}.value{font-size:17px}}
+  </style>
+</head>
+<body>
+  <header class="head">Detail Barang Gudang</header>
+  <main class="wrap"><section id="content" class="card"><div class="loading">Memuat data barang…</div></section></main>
+  <script>
+    const QR_CODE = <?!= JSON.stringify(QR_CODE) ?>;
+    const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+
+    function renderResult(res){
+      const root = document.getElementById('content');
+      if (!res || !res.ok) {
+        root.innerHTML = `<div class="error">${esc(res?.message || 'Data barang tidak ditemukan.')}</div>`;
+        return;
+      }
+      const x = res.item || {};
+      const photo = x.fotoUrl
+        ? `<img src="${esc(x.fotoUrl)}" alt="Foto ${esc(x.nama)}">`
+        : `<div class="empty">Foto barang belum tersedia</div>`;
+      root.innerHTML = `
+        <div class="photo">${photo}</div>
+        <div class="info">
+          <div class="kode">${esc(x.kode)}</div>
+          <div class="nama">${esc(x.nama)}</div>
+          <div class="grid">
+            <div class="field"><div class="label">Jumlah / Stok</div><div class="value">${esc(x.stok)} ${esc(x.sat)}</div></div>
+            <div class="field"><div class="label">Rak</div><div class="value">${esc(x.rak || '-')}</div></div>
+            <div class="field wide"><div class="label">Gudang</div><div class="value">${esc(x.gudang || '-')}</div></div>
+          </div>
+        </div>`;
+    }
+
+    google.script.run
+      .withSuccessHandler(renderResult)
+      .withFailureHandler(err => renderResult({ok:false,message:err?.message || 'Gagal mengambil data barang.'}))
+      .getQrBarangDetail(QR_CODE);
+  </script>
+</body>
+</html>

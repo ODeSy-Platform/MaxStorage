@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>\n
+
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args, lokasiId: new URLSearchParams(window.location.search).get('lokasi') })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mutasi Gudang</title>
+
+<style>
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#fff;               /* sisa kanan putih */
+  overflow-x:auto;
+}
+
+/* header */
+header{
+  background:#3a70d8;
+  color:#fff;
+  padding:10px 16px;
+  font-weight:bold;
+  font-size:20px;
+  text-align:center;
+}
+
+/* halaman */
+.page{width:100%; padding:12px 0}
+
+/* kanvas fixed, nempel kiri -> sisa kanan putih */
+.canvas{
+  width:1280px;
+  margin-left:14px;
+  margin-right:auto;
+}
+
+/* ===== TOP LAYOUT (sesuai Excel) =====
+   kiri: area logo
+   tengah: foto + info
+   kanan: tombol warna + daftar barang (pindahan)
+*/
+.top{
+  display:grid;
+  grid-template-columns: 260px 520px 1fr;
+  gap:12px;
+  align-items:start;
+}
+
+/* card */
+.card{
+  background:#fff;
+  border-radius:10px;
+  padding:12px;
+  box-shadow:0 2px 6px rgba(0,0,0,.08);
+}
+
+/* ===== kiri: logo area (biar “ruang logo” seperti excel) ===== */
+.logoArea{
+  height:500px;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding-top:18px;
+}
+.logoArea .brand{
+  text-align:center;
+  line-height:1.2;
+}
+.logoArea .brand .title{
+  font-weight:800;
+  font-size:34px;
+  letter-spacing:1px;
+}
+.logoArea .brand .sub{
+  margin-top:10px;
+  font-family:Georgia, 'Times New Roman', serif;
+  color:#b10c0c;
+  font-size:18px;
+  letter-spacing:.5px;
+}
+
+/* ===== tengah: foto + info ===== */
+.infoWrap{
+  display:grid;
+  grid-template-columns: 320px 1fr;
+  gap:12px;
+  align-items:start;
+}
+.fotoBox{
+  border:2px solid #222;
+  width:320px;
+  height:320px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#fff;
+  overflow:hidden;
+}
+.fotoBox img,.fotoBox video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+.infoText{padding-top:10px;font-size:15px}
+.infoLine{
+  display:grid;
+  grid-template-columns:110px 10px 1fr;
+  margin:6px 0;
+  align-items:center;
+}
+.lbl{font-weight:bold}
+.colon{font-weight:bold}
+.val{font-weight:bold;font-size:20px}
+
+.infoNama{
+  font-size:20px;
+  font-weight:bold;
+  color:#e67e22;
+  margin:8px 0 12px 0;
+  border-bottom:1px solid #333;
+  padding-bottom:6px;
+}
+
+/* ===== kanan: tombol + daftar barang (pindahan dari kiri) ===== */
+.rightWrap{
+  display:grid;
+  grid-template-columns:220px 1fr; /* kiri tombol, kanan daftar barang */
+  gap:12px;
+  align-items:start;
+}
+
+/* tombol sheet */
+.sheetBtns{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  width:220px;
+}
+.sheetBtn{
+  border:none;
+  border-radius:6px;
+  padding:8px 10px;
+  font-weight:bold;
+  color:#fff;
+  cursor:pointer;
+  font-size:12px;
+  text-align:center;
+}
+.yellow{background:#f1b600}
+.orange{background:#e67e22}
+.green{background:#5aa84a}
+.gray{background:#8e8e8e}
+.blue{background:#4b89dc}
+.blue2{background:#2f6ec7}
+
+/* daftar barang (pindahan) */
+.daftarTitle{font-weight:800;margin:0 0 6px 0}
+.searchBox{
+  width:100%;
+  padding:8px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  margin-bottom:8px;
+}
+.selectBox{
+  width:100%;
+  padding:6px;
+  border-radius:6px;
+  border:1px solid #ccc;
+  margin-bottom:8px;
+}
+.list{
+  height:500px;
+  overflow:auto;
+  border:1px solid #ddd;
+  border-radius:8px;
+}
+.item{
+  padding:8px;
+  border-bottom:1px solid #eee;
+  cursor:pointer;
+}
+.item:hover{background:#f0f6ff}
+
+/* ===== bottom 4 form ===== */
+.bottom{
+  margin-top:12px;
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:12px;
+}
+
+.formTitle{
+  font-weight:bold;
+  text-align:center;
+  color:#fff;
+  border-radius:6px;
+  padding:8px;
+  margin-bottom:8px;
+}
+.masuk{background:#f1b600}
+.keluar{background:#e67e22}
+.rusak{background:#5aa84a}
+.hilang{background:#8e8e8e}
+
+table{width:100%;font-size:13px}
+td{padding:4px}
+input{width:100%;padding:6px;border:1px solid #ccc;border-radius:6px}
+
+/* HP */
+@media(max-width:900px){
+  body{overflow-x:hidden}
+  .canvas{width:auto;margin:10px}
+  .top{grid-template-columns:1fr}
+  .infoWrap{grid-template-columns:1fr}
+  .fotoBox{width:100%;height:auto;aspect-ratio:1/1}
+  .rightWrap{grid-template-columns:1fr}
+  .sheetBtns{width:100%;flex-direction:row;flex-wrap:wrap}
+  .sheetBtn{flex:1;min-width:150px}
+  .bottom{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<header>KATALOG &amp; INPUT</header>
+
+<div class="page">
+  <div class="canvas">
+
+    <div class="top">
+
+      <!-- KIRI (ruang logo) -->
+      <div class="card logoArea">
+        <div class="brand">
+          <div class="title">MAXMAR</div>
+          <div class="sub">PT MAJA ROYAL VANNAMEI</div>
+        </div>
+      </div>
+
+      <!-- TENGAH -->
+      <div class="card">
+        <div class="infoWrap">
+          <div id="fotoBox" class="fotoBox">Foto Barang</div>
+
+          <div class="infoText">
+            <div class="infoLine"><div class="lbl">KODE</div><div class="colon">:</div><div class="val" id="iKode">-</div></div>
+            <div class="infoNama" id="iNama">-</div>
+            <div class="infoLine"><div class="lbl">STOK</div><div class="colon">:</div>
+              <div class="val"><span id="iStok">0</span> <span id="iSat">PCS</span></div>
+            </div>
+            <div class="infoLine"><div class="lbl">ALAMAT RAK</div><div class="colon">:</div><div class="val" id="iRak">-</div></div>
+
+            <button onclick="startScan()" style="margin-top:10px;padding:10px;width:200px;border:none;border-radius:8px;background:#4b89dc;color:#fff;font-weight:bold;cursor:pointer">
+              📷 PINDAI QR
+            </button>
+
+            <button onclick="openBarangBaru()" style="margin-top:10px;padding:10px;width:200px;border:none;border-radius:8px;background:#3a70d8;color:#fff;font-weight:bold;cursor:pointer">
+              + BARANG BARU
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KANAN: tombol + daftar barang (pindahan dari kiri) -->
+      <div class="card">
+        <div class="rightWrap">
+
+          <div class="sheetBtns">
+            <button class="sheetBtn yellow">SHEET INPUT MASUK</button>
+            <button class="sheetBtn orange">SHEET INPUT KELUAR</button>
+            <button class="sheetBtn green">SHEET INPUT RUSAK</button>
+            <button class="sheetBtn gray">SHEET INPUT HILANG</button>
+            <button class="sheetBtn blue">SHEET GUDANG ALFA</button>
+            <button class="sheetBtn blue2">SHEET GUDANG BETA</button>
+            <button class="sheetBtn blue2">SHEET GUDANG OMEGA</button>
+          </div>
+
+          <!-- ✅ INI = GAMBAR 2 DIPINDAH KE SINI -->
+          <div>
+            <div class="daftarTitle">Daftar Barang</div>
+
+            <input id="search" class="searchBox" placeholder="Cari kode / nama / barcode" oninput="renderList()">
+
+            <select id="filterGudang" class="selectBox" onchange="renderList()">
+              <option value="ALL">Semua Gudang</option>
+              <option value="Gudang ALFA">Gudang ALFA</option>
+              <option value="Gudang BETA">Gudang BETA</option>
+              <option value="Gudang OMEGA">Gudang OMEGA</option>
+            </select>
+
+            <div id="list" class="list"></div>
+          </div>
+
+        </div>
+      </div>
+
+    </div><!-- end top -->
+
+    <!-- BAWAH 4 FORM -->
+    <div class="bottom">
+
+      <div class="card">
+        <div class="formTitle masuk">INPUT MASUK</div>
+        <table>
+          <tr><td>No</td><td><input id="m_no" readonly></td></tr>
+          <tr><td>Tanggal</td><td><input id="m_tgl" readonly></td></tr>
+          <tr><td>Kode</td><td><input id="m_kode" readonly></td></tr>
+          <tr><td>Jumlah</td><td><input id="m_jumlah" type="number"></td></tr>
+          <tr><td>Ket</td><td><input id="m_ket"></td></tr>
+        </table>
+        <button onclick="simpanMasuk()" style="margin-top:8px;width:100%;padding:10px;border:none;border-radius:8px;background:#f1b600;color:#fff;font-weight:bold">
+          SIMPAN
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="formTitle keluar">INPUT KELUAR</div>
+        (nanti bisa kamu isi fungsi keluar)
+      </div>
+
+      <div class="card">
+        <div class="formTitle rusak">INPUT RUSAK</div>
+        (nanti bisa kamu isi fungsi rusak)
+      </div>
+
+      <div class="card">
+        <div class="formTitle hilang">INPUT HILANG</div>
+        (nanti bisa kamu isi fungsi hilang)
+      </div>
+
+    </div><!-- end bottom -->
+
+  </div><!-- end canvas -->
+</div><!-- end page -->
+
+<!-- MODAL BARANG BARU -->
+<div id="modalBaru" style="display:none;position:fixed;inset:0;background:#0008;z-index:9999;align-items:center;justify-content:center">
+  <div style="background:#fff;padding:15px;border-radius:8px;width:320px">
+    <h3>Tambah Barang Baru</h3>
+    <input id="nb_kode" placeholder="Kode Barang" style="width:100%;padding:8px"><br><br>
+    <input id="nb_nama" placeholder="Nama Barang" style="width:100%;padding:8px"><br><br>
+    <input id="nb_sat" placeholder="Satuan" style="width:100%;padding:8px"><br><br>
+    <input id="nb_rak" placeholder="Rak" style="width:100%;padding:8px"><br><br>
+    <button onclick="simpanBarangBaru()">Simpan</button>
+    <button onclick="closeBarangBaru()">Batal</button>
+  </div>
+</div>
+
+<script>
+const BASE_URL = "<?!= BASE_URL ?>";
+
+let DATA = [];
+let CURRENT = null;
+let videoStream = null;
+let SHEET_LINKS = {};
+
+function load(){
+  google.script.run.withSuccessHandler(items=>{
+    DATA = items || [];
+    renderList();
+  }).getDashboardData();
+
+  google.script.run.withSuccessHandler(links=>{
+    SHEET_LINKS = links || {};
+    bindSheetButtons();
+  }).getSheetLinks();
+}
+
+function renderList(){
+  const q = (document.getElementById('search').value || '').toLowerCase();
+  const g = document.getElementById('filterGudang').value;
+  const list = document.getElementById('list');
+  list.innerHTML='';
+
+  DATA.filter(x=>{
+    if(g!=='ALL' && x.gudang!==g) return false;
+    return String(x.kode).toLowerCase().includes(q) ||
+           String(x.nama).toLowerCase().includes(q) ||
+           String(x.barcode||'').toLowerCase().includes(q);
+  }).forEach(x=>{
+    const d=document.createElement('div');
+    d.className='item';
+    d.textContent=`${x.kode} - ${x.nama}`;
+    d.onclick=()=>selectItem(x);
+    list.appendChild(d);
+  });
+}
+
+function selectItem(x){
+  CURRENT = x;
+  document.getElementById('iKode').textContent = x.kode;
+  document.getElementById('iNama').textContent = x.nama;
+  document.getElementById('iStok').textContent = x.stok;
+  document.getElementById('iSat').textContent  = x.sat || '';
+  document.getElementById('iRak').textContent  = x.rak || '';
+
+  const fotoBox = document.getElementById('fotoBox');
+  if (x.fotoUrl) fotoBox.innerHTML = `<img src="${x.fotoUrl}" alt="Foto Barang">`;
+  else fotoBox.innerHTML = "Foto Barang";
+
+  document.getElementById('m_no').value  = Date.now();
+  document.getElementById('m_tgl').value = new Date().toLocaleDateString('id-ID');
+  document.getElementById('m_kode').value = x.kode;
+}
+
+async function startScan(){
+  if(!('BarcodeDetector' in window)){
+    alert('Gunakan Chrome terbaru');
+    return;
+  }
+
+  const detector = new BarcodeDetector({formats:['qr_code','code_128','ean_13']});
+  const video = document.createElement('video');
+
+  const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+  videoStream = stream;
+  video.srcObject = stream;
+  await video.play();
+
+  const fotoBox = document.getElementById('fotoBox');
+  fotoBox.innerHTML = '';
+  fotoBox.appendChild(video);
+
+  const loop = async ()=>{
+    if(!videoStream) return;
+    const codes = await detector.detect(video);
+    if(codes.length){
+      const raw = codes[0].rawValue;
+      stopScan();
+      findByCode(raw);
+      return;
+    }
+    requestAnimationFrame(loop);
+  };
+  loop();
+}
+
+function stopScan(){
+  if(videoStream){
+    videoStream.getTracks().forEach(t=>t.stop());
+    videoStream = null;
+  }
+  if (CURRENT) selectItem(CURRENT);
+  else document.getElementById('fotoBox').innerHTML = "Foto Barang";
+}
+
+function findByCode(code){
+  const f = DATA.find(x=>String(x.kode)==code || String(x.barcode)==code);
+  if(f) selectItem(f);
+  else alert('Barang tidak ditemukan: ' + code);
+}
+
+function openBarangBaru(){
+  document.getElementById('modalBaru').style.display='flex';
+}
+function closeBarangBaru(){
+  document.getElementById('modalBaru').style.display='none';
+}
+
+function simpanBarangBaru(){
+  const gudang = document.getElementById('filterGudang').value;
+  if(gudang==='ALL') return alert('Pilih gudang dulu');
+
+  const data={
+    kode: document.getElementById('nb_kode').value.trim(),
+    nama: document.getElementById('nb_nama').value.trim(),
+    sat:  document.getElementById('nb_sat').value.trim(),
+    rak:  document.getElementById('nb_rak').value.trim(),
+    gudang: gudang
+  };
+  if(!data.kode || !data.nama) return alert('Kode & Nama wajib');
+
+  google.script.run.withSuccessHandler(()=>{
+    alert('Barang baru ditambahkan');
+    closeBarangBaru();
+    load();
+  }).tambahBarangBaru(data);
+}
+
+function simpanMasuk(){
+  if(!CURRENT) return alert('Pilih barang dulu');
+  const jumlah = Number(document.getElementById('m_jumlah').value);
+  if(jumlah<=0) return alert('Jumlah harus > 0');
+
+  google.script.run.withSuccessHandler(()=>{
+    alert('Masuk tersimpan');
+    document.getElementById('m_jumlah').value='';
+    document.getElementById('m_ket').value='';
+    load();
+  }).transaksiMasuk({
+    kode: CURRENT.kode,
+    nama: CURRENT.nama,
+    gudang: CURRENT.gudang,
+    jumlah: jumlah,
+    ket: document.getElementById('m_ket').value
+  });
+}
+
+/* tombol buka sheet */
+function bindSheetButtons(){
+  const btns = document.querySelectorAll('.sheetBtns .sheetBtn');
+  if(!btns.length) return;
+
+  const map = [
+    {key:'inputMasuk'},
+    {key:'inputKeluar'},
+    {key:'inputRusak'},
+    {key:'inputHilang'},
+    {key:'gudangAlfa'},
+    {key:'gudangBeta'},
+    {key:'gudangOmega'},
+  ];
+
+  btns.forEach((b, i)=>{
+    const k = map[i] && map[i].key;
+    b.onclick = ()=> openSheet(k);
+  });
+}
+function openSheet(key){
+  const url = SHEET_LINKS[key];
+  if(!url) return alert('Link sheet belum ada: ' + key);
+  window.open(url, '_blank');
+}
+
+load();
+</script>
+
+</body>
+</html>
