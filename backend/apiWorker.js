@@ -42,6 +42,13 @@ try {
         if (config.GUDANG_SHEETS) process.env.GUDANG_SHEETS = JSON.stringify(config.GUDANG_SHEETS);
         if (config.PHOTO_FOLDER_BY_GUDANG) process.env.PHOTO_FOLDER_BY_GUDANG = JSON.stringify(config.PHOTO_FOLDER_BY_GUDANG);
         if (config.PHOTO_FOLDER_NAME_BY_GUDANG) process.env.PHOTO_FOLDER_NAME_BY_GUDANG = JSON.stringify(config.PHOTO_FOLDER_NAME_BY_GUDANG);
+
+        if (config.PASS_MASTER) process.env.PASS_MASTER = config.PASS_MASTER;
+        if (config.PASS_KIRIM_PO) process.env.PASS_KIRIM_PO = config.PASS_KIRIM_PO;
+        if (config.PASS_INPUT) process.env.PASS_INPUT = config.PASS_INPUT;
+        if (config.PDF_FOLDER_ID) process.env.PDF_FOLDER_ID = config.PDF_FOLDER_ID;
+        if (config.TEMPLATE_SS_ID) process.env.TEMPLATE_SS_ID = config.TEMPLATE_SS_ID;
+        if (config.WAHA_API_KEY) process.env.WAHA_API_KEY = config.WAHA_API_KEY;
       }
     }
   }

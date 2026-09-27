@@ -20,7 +20,7 @@
           fetch('/api/' + prop, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ args: args, lokasiId: new URLSearchParams(window.location.search).get('lokasi') })
+            body: JSON.stringify({ args: args, lokasiId: (new URLSearchParams(window.location.search).getAll('lokasi').pop() || new URLSearchParams(window.location.search).get('companyId') || 'MAJA') })
           })
           .then(r => r.json())
           .then(res => {
@@ -1418,11 +1418,27 @@ function setPoFocusMode(on){
   else el.classList.remove('po-focus-mode');
 }
 </script>
+
+<script>
+(function() {
+  var lokasi = new URLSearchParams(window.location.search).get("lokasi") || "MAJA";
+  var MAP = {"MAJA":"PT Maja Royal Vannamei","RHEE":"PT Rhee Royal Vannamei","BELA":"PT Maximus Shrimp Farm (Belanting)","GERO":"PT Maximus Shrimp Farm (Gerokgak)","JEMB":"CV Jembrana Royal Vannamei","KAWA":"CV Kawang Royal Vannamei","REJO":"CV Rejo Royal Vannamei","TOMI":"PT Arona Teluk Tomini","IMIN":"PT Imani Matra Infinity","BANG":"PT Matra Arona Banggai","MSU":"PT Matra Sinergi Utama","MADM":"CV Matra Arona Madura","GAGA":"CV Gading Gajah","SEGA":"PT Segaran Sejahtera","PEJA":"CV Pejayan Royal Vannamei","REKB":"CV Reksa Bumi","SUMA":"CV Suma"};
+  function setBadge() {
+    var el = document.getElementById("company-badge-name");
+    var nama = MAP[lokasi] || lokasi;
+    if (el) el.textContent = nama;
+    document.title = "🏭 " + nama + " | PO & Barang Masuk";
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", setBadge);
+  else setBadge();
+})();
+</script>
 </head>
 
 <body>
 <header>
   <div class="title">🧾 Transaksi PO & Barang Masuk</div>
+  <div id="company-badge" style="display:inline-flex;align-items:center;gap:6px;padding:4px 14px;background:var(--primary);color:#fff;border-radius:20px;font-size:13px;font-weight:700;margin-left:8px;box-shadow:0 2px 8px rgba(0,110,230,0.3);"><span>??</span><span id="company-badge-name">...</span></div>
   <div class="sp"></div>
   <div class="theme-switch-wrapper" style="display:flex; align-items:center; gap:8px; margin-right:12px;">
     <span class="theme-label" style="font-size:14px; font-weight:600; color:var(--text); opacity:0.8;">Mode Gelap</span>
@@ -2555,7 +2571,7 @@ function submitCorrectionRequest(){
   if (!(newQty > 0)) return toastWarn("Data belum lengkap", "Jumlah yang benar harus lebih dari 0.");
   if (!reason) return toastWarn("Data belum lengkap", "Alasan koreksi wajib diisi.");
   showPassModal("Password Koreksi", "Masukkan password input untuk memproses koreksi.", function(pass){
-    if (pass !== "msf.003") return toastError("Gagal", "Password salah!");
+    if (pass !== DYNAMIC_PASS.input) return toastError("Gagal", "Password salah!");
     showConfirm("Simpan koreksi?", "Jumlah akan diubah dari " + oldQty + " menjadi " + newQty + ".", "OK", "Cancel", function(){
       saveCorrection(logRow, newQty, reason, pass);
     });
@@ -3590,7 +3606,7 @@ function saveBarangBaru(){
     "Cancel",
     () => {
       showPassModal("Password", "Masukkan password untuk simpan barang baru.", pass => {
-        if (pass !== "msf.001") return toastError("Gagal", "Password salah!");
+        if (pass !== DYNAMIC_PASS.master) return toastError("Gagal", "Password salah!");
         simpanBarangBaruFinal({ gudang, kode, nama, sat, rak, fotoFile });
       });
     }
@@ -4108,7 +4124,7 @@ function saveEditFoto(){
   if (!EDIT_FOTO_DATA) return toastWarn("Peringatan!", "Pilih atau ambil foto baru dulu.");
 
   showPassModal("Password", "Masukkan password untuk simpan foto.", pass => {
-    if (pass !== "msf.001") return toastError("Gagal", "Password salah!");
+    if (pass !== DYNAMIC_PASS.master) return toastError("Gagal", "Password salah!");
 
     showConfirm(
       "Konfirmasi",
@@ -4182,7 +4198,7 @@ function saveEditFoto(){
   }
 
   showPassModal("Password", "Masukkan password untuk simpan perubahan.", pass => {
-    if (pass !== "msf.001") return toastError("Gagal", "Password salah!");
+    if (pass !== DYNAMIC_PASS.master) return toastError("Gagal", "Password salah!");
 
     showConfirm(
       "Konfirmasi",
@@ -4274,7 +4290,7 @@ function deleteEditFoto(){
   if (!CURRENT) return toastWarn("Peringatan!", "Pilih barang dulu.");
 
   showPassModal("Password", "Masukkan password untuk hapus foto.", pass => {
-    if (pass !== "msf.001") return toastError("Gagal", "Password salah!");
+    if (pass !== DYNAMIC_PASS.master) return toastError("Gagal", "Password salah!");
 
     showConfirm(
       "Konfirmasi",
@@ -4807,7 +4823,7 @@ function confirmSaveDraft(share = false){
     share ? "Simpan Draft + Sharing" : "Simpan Draft",
     share ? "Masukkan password untuk menyimpan draft PO + Sharing." : "Masukkan password untuk menyimpan draft PO.",
     (pass) => {
-      if (pass !== "msf.001"){
+      if (pass !== DYNAMIC_PASS.master){
         toastError("Gagal", "Password salah!");
         return;
       }
@@ -4822,7 +4838,7 @@ function confirmSendPo(){
     `Kirim PO - ${tujuan}`,
     `Masukkan password untuk mengirim PO ke ${tujuan}.`,
     (pass) => {
-      if (pass !== "msf.002"){
+      if (pass !== DYNAMIC_PASS.kirim){
         toastError("Gagal", "Password salah!");
         return;
       }
@@ -4893,7 +4909,7 @@ function confirmInputBarangMasuk(){
     "Password Input Barang",
     "Masukkan password untuk memproses barang masuk.",
     (pass) => {
-      if (pass !== "msf.003"){
+      if (pass !== DYNAMIC_PASS.input){
         toastError("Gagal", "Password salah!");
         return;
       }

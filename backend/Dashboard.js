@@ -4,22 +4,16 @@
  * - Filter tanggal & range + kalender tanggal ada data (lingkar merah)
  ***********************/
 
-const SS_ID = process.env.SS_ID || '18xmQa0cR_yppzl-eEu0rDXhSpIYfeIC7PZH9jnbL4h4';
-const SS_REKAP_ID = process.env.SS_REKAP_ID || '1U6waJeIUpEBZq0zmOPsXgwEw-0mkMAXny55w9GCfn5k';
-const KARYAWAN_SS_ID = process.env.KARYAWAN_SS_ID || '1T7oXtUeLv-Te4OZE0XRE1lNxnvFV7HzhtyInEGybU4k';
-const GUDANG_SHEETS = process.env.GUDANG_SHEETS ? JSON.parse(process.env.GUDANG_SHEETS) : ['Gudang ALFA', 'Gudang BETA', 'Gudang OMEGA', 'Gudang GAMMA'];
-const PHOTO_FOLDER_BY_GUDANG = process.env.PHOTO_FOLDER_BY_GUDANG ? JSON.parse(process.env.PHOTO_FOLDER_BY_GUDANG) : {
-  'Gudang ALFA': '1as2ZCz6tIXCCNmr5VNZvXcGtAYtfT42l',
-  'Gudang BETA': '14WJUdc0JtfjDEaqqPBhcNPdHJ-PVF1NJ', 
-  'Gudang OMEGA': '1-hCYsK9-QgqdNKJ5mD6Zphe6gf81CbgO',
-  'Gudang GAMMA': '1gjVciGMLukojQ4EmtyylWIpEvwG5nwwc',
-};
-const PHOTO_FOLDER_NAME_BY_GUDANG = process.env.PHOTO_FOLDER_NAME_BY_GUDANG ? JSON.parse(process.env.PHOTO_FOLDER_NAME_BY_GUDANG) : {
-  'Gudang ALFA': 'Gudang Alfa - Maja',
-  'Gudang BETA': 'Gudang Beta - Maja',
-  'Gudang OMEGA': 'Gudang Omega - Maja',
-  'Gudang GAMMA': 'Gudang Gamma - Maja',
-};
+// ============================================================
+// DYNAMIC CONFIG: Dibaca ulang tiap request agar multi-lokasi
+// ============================================================
+Object.defineProperty(global, 'SS_ID', { get: () => process.env.SS_ID || '18xmQa0cR_yppzl-eEu0rDXhSpIYfeIC7PZH9jnbL4h4', configurable: true, enumerable: true });
+Object.defineProperty(global, 'SS_REKAP_ID', { get: () => process.env.SS_REKAP_ID || '1U6waJeIUpEBZq0zmOPsXgwEw-0mkMAXny55w9GCfn5k', configurable: true, enumerable: true });
+Object.defineProperty(global, 'KARYAWAN_SS_ID', { get: () => process.env.KARYAWAN_SS_ID || '1T7oXtUeLv-Te4OZE0XRE1lNxnvFV7HzhtyInEGybU4k', configurable: true, enumerable: true });
+Object.defineProperty(global, 'GUDANG_SHEETS', { get: () => process.env.GUDANG_SHEETS ? JSON.parse(process.env.GUDANG_SHEETS) : ['Gudang ALFA', 'Gudang BETA', 'Gudang OMEGA', 'Gudang GAMMA'], configurable: true, enumerable: true });
+Object.defineProperty(global, 'PHOTO_FOLDER_BY_GUDANG', { get: () => process.env.PHOTO_FOLDER_BY_GUDANG ? JSON.parse(process.env.PHOTO_FOLDER_BY_GUDANG) : { 'Gudang ALFA': '1as2ZCz6tIXCCNmr5VNZvXcGtAYtfT42l', 'Gudang BETA': '14WJUdc0JtfjDEaqqPBhcNPdHJ-PVF1NJ', 'Gudang OMEGA': '1-hCYsK9-QgqdNKJ5mD6Zphe6gf81CbgO', 'Gudang GAMMA': '1gjVciGMLukojQ4EmtyylWIpEvwG5nwwc' }, configurable: true, enumerable: true });
+Object.defineProperty(global, 'PHOTO_FOLDER_NAME_BY_GUDANG', { get: () => process.env.PHOTO_FOLDER_NAME_BY_GUDANG ? JSON.parse(process.env.PHOTO_FOLDER_NAME_BY_GUDANG) : { 'Gudang ALFA': 'Gudang Alfa - Maja', 'Gudang BETA': 'Gudang Beta - Maja', 'Gudang OMEGA': 'Gudang Omega - Maja', 'Gudang GAMMA': 'Gudang Gamma - Maja' }, configurable: true, enumerable: true });
+
 
 const INPUT_SHEETS = {
   masuk: 'INPUT Barang Masuk',

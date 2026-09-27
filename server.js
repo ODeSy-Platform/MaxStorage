@@ -96,7 +96,21 @@ function workerCall(method, args, lokasiId, bypassCache) {
 app.post('/api/:method', async (req, res) => {
   const method = req.params.method;
   const args = (req.body && req.body.args) || [];
-  const lokasiId = req.body && req.body.lokasiId;
+  let lokasiId = req.body && req.body.lokasiId;
+  // OVERRIDE FROM REFERER
+  if (req.headers.referer) {
+    try {
+      const refUrl = new URL(req.headers.referer);
+      const allLok = refUrl.searchParams.getAll('lokasi');
+      const compId = refUrl.searchParams.get('companyId');
+      if (allLok.length > 0) {
+        lokasiId = allLok[allLok.length - 1];
+      } else if (compId) {
+        lokasiId = compId;
+      }
+    } catch(e) {}
+  }
+  console.log('[API]', method, 'lokasiId:', lokasiId, 'override:', !!req.headers.referer);
 
   try {
     const data = await workerCall(method, args, lokasiId, false);
@@ -106,6 +120,16 @@ app.post('/api/:method', async (req, res) => {
   }
 });
 
+
+app.get('/api/getLokasiConfig', (req, res) => {
+  const lokasi = req.query.lokasi || req.query.companyId || "MAJA";
+  try {
+    const config = JSON.parse(fs.readFileSync(MASTER_PATH, 'utf8'))[lokasi];
+    if (config) {
+      res.json({ ok: true, data: { master: config.PASS_MASTER, kirim: config.PASS_KIRIM_PO, input: config.PASS_INPUT } });
+    } else { res.json({ ok: false }); }
+  } catch(e) { res.json({ ok: false }); }
+});
 // Route utama
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'po_lokasi.html'));
