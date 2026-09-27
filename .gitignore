@@ -1,0 +1,6 @@
+node_modules/
+.env
+credentials.json
+*.bak
+*.log
+backend/script_cache.json
