@@ -129,8 +129,8 @@ function getPublicQrBarangData_(kode) {
 }
 
 function forceRefreshDashboardData() {
-  CacheService.getScriptCache().remove('DASH_ITEMS_V1');
-  CacheService.getScriptCache().remove('ALFA_PHOTO_MAP_V1');
+  CacheService.getScriptCache().remove(SS_ID + '_DASH_ITEMS_V1');
+  CacheService.getScriptCache().remove(SS_ID + '_ALFA_PHOTO_MAP_V1');
   GUDANG_SHEETS.forEach(sheetName => {
     CacheService.getScriptCache().remove(getPhotoMapCacheKey_(sheetName));
   });
@@ -174,7 +174,7 @@ function getKodeLkhOptions() {
 /** ===== CORE DASHBOARD ===== */
 function getDashboardData_() {
   const cache = CacheService.getScriptCache();
-  const cached = cache.get('DASH_ITEMS_V1');
+  const cached = cache.get(SS_ID + '_DASH_ITEMS_V1');
   if (cached && process.env.BYPASS_CACHE !== 'true') {
     try { return JSON.parse(cached); } catch (e) {}
   }
@@ -241,7 +241,7 @@ function getDashboardData_() {
     }
   });
 
-  safeCachePut_('DASH_ITEMS_V1', JSON.stringify(result), 30);
+  safeCachePut_(SS_ID + '_DASH_ITEMS_V1', JSON.stringify(result), 30);
   return result;
 }
 
@@ -391,7 +391,7 @@ function uploadBarangPhoto_(gudang, kode, nama, photo) {
   }
 
   CacheService.getScriptCache().remove(getPhotoMapCacheKey_(gudang));
-  CacheService.getScriptCache().remove('DASH_ITEMS_V1');
+  CacheService.getScriptCache().remove(SS_ID + '_DASH_ITEMS_V1');
 
   return 'https://drive.google.com/thumbnail?id=' + file.getId() + '&sz=w1000';
 }
@@ -439,7 +439,7 @@ function deleteBarangPhotoFiles_(gudang, kode) {
   }
 
   CacheService.getScriptCache().remove(getPhotoMapCacheKey_(gudang));
-  CacheService.getScriptCache().remove('DASH_ITEMS_V1');
+  CacheService.getScriptCache().remove(SS_ID + '_DASH_ITEMS_V1');
   return count;
 }
 
@@ -493,7 +493,7 @@ function updateBarangDetail(payload) {
   }
 
   renameOrMoveBarangPhotos_(oldGudang, oldKode, newGudang, newKode, nama);
-  CacheService.getScriptCache().remove('DASH_ITEMS_V1');
+  CacheService.getScriptCache().remove(SS_ID + '_DASH_ITEMS_V1');
   CacheService.getScriptCache().remove(getPhotoMapCacheKey_(oldGudang));
   CacheService.getScriptCache().remove(getPhotoMapCacheKey_(newGudang));
 
@@ -763,7 +763,7 @@ function transaksiCore_(type, data) {
   const delta = Number(data.jumlah) * (type === 'masuk' ? 1 : -1);
   updateStokGudang_(data.gudang, data.kode, delta);
 
-  CacheService.getScriptCache().remove('DASH_ITEMS_V1');
+  CacheService.getScriptCache().remove(SS_ID + '_DASH_ITEMS_V1');
   return true;
 }
 
@@ -2096,7 +2096,7 @@ function correctPoInputTransaction(payload){
       }
     }
 
-    CacheService.getScriptCache().remove('DASH_ITEMS_V1');
+    CacheService.getScriptCache().remove(SS_ID + '_DASH_ITEMS_V1');
     SpreadsheetApp.flush();
     return { ok:true, oldQty:oldQty, newQty:newQty, total:correctedTotal };
   } finally {
@@ -2377,7 +2377,7 @@ try {
   Logger.log("Gagal update rekap jumlah masuk: " + err);
 }
 
-  CacheService.getScriptCache().remove('DASH_ITEMS_V1');
+  CacheService.getScriptCache().remove(SS_ID + '_DASH_ITEMS_V1');
   SpreadsheetApp.flush();
 
   return { ok:true };
@@ -2679,7 +2679,7 @@ function addBarangBaru(payload){
     }
   }
 
-  CacheService.getScriptCache().remove("DASH_ITEMS_V1");
+  CacheService.getScriptCache().remove(SS_ID + '_DASH_ITEMS_V1');
   CacheService.getScriptCache().remove(getPhotoMapCacheKey_(gudang));
   SpreadsheetApp.flush();
 
@@ -2861,7 +2861,7 @@ function refreshSemuaRumusStokGudang() {
   });
 
   SpreadsheetApp.flush();
-  CacheService.getScriptCache().remove('DASH_ITEMS_V1');
+  CacheService.getScriptCache().remove(SS_ID + '_DASH_ITEMS_V1');
   return result;
 }
 
