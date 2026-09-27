@@ -28,9 +28,7 @@ class SpreadsheetAppProxy {
     try {
       if (require('fs').existsSync(cacheFile)) {
         const stats = require('fs').statSync(cacheFile);
-        if (process.env.BYPASS_CACHE !== 'true') { // 15 seconds cache
-          resData = JSON.parse(require('fs').readFileSync(cacheFile, 'utf8'));
-        }
+        undefined
       }
     } catch (e) {}
     
