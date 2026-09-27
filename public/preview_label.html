@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="id"><head>\n
+
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args, lokasiId: new URLSearchParams(window.location.search).get('lokasi') })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+<meta charset="utf-8"><title>Label Preview</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #eef2f7; color: #000; font-family: Arial, sans-serif; }
+  .page { display: flex; justify-content: center; padding: 24px; }
+  
+  /* LABEL SIZE for Epson LW-600P 24mm tape */
+  .label {
+    width: 56mm;
+    height: 24mm;
+    background: #fff;
+    border: 1px solid #000; /* border for preview only */
+    padding: 1.5mm 2mm;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1.5mm;
+    overflow: hidden;
+    border-radius: 2mm;
+  }
+  .detail {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 100%;
+  }
+  .kode {
+    font-size: 15pt;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 0.8mm;
+    word-break: break-all;
+    color: #001f3f;
+  }
+  .nama {
+    font-size: 8.5pt;
+    font-weight: 800;
+    line-height: 1.1;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin-bottom: 0.8mm;
+    color: #002b5e;
+  }
+  .rakLabel {
+    font-size: 5pt;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #555;
+  }
+  .rak {
+    font-size: 13pt;
+    font-weight: 900;
+    line-height: 1;
+    margin-top: 0.3mm;
+    color: #001f3f;
+  }
+  .qr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    flex-shrink: 0;
+  }
+  .qr img {
+    display: block;
+    width: 20mm;
+    height: 20mm;
+    object-fit: contain;
+  }
+  .qr small {
+    font-size: 5.5pt;
+    font-weight: 900;
+    margin-top: 0.3mm;
+    text-align: center;
+    color: #002b5e;
+  }
+</style></head><body>
+  <div class="page">
+    <div class="label">
+      <div class="detail">
+        <div>
+          <div class="kode">A-009</div>
+          <div class="nama">Air Aki Accu Biru<br>@1 Liter</div>
+        </div>
+        <div>
+          <div class="rakLabel">RAK</div>
+          <div class="rak">B6</div>
+        </div>
+      </div>
+      <div class="qr">
+        <img src="https://quickchart.io/qr?text=test&size=150&margin=1" alt="QR">
+        <small>A-009</small>
+      </div>
+    </div>
+  </div>
+</body></html>

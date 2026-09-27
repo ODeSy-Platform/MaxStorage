@@ -1,0 +1,31 @@
+{
+  "MAJA": {
+    "nama_perusahaan": "PT Maja Royal Vannamei",
+    "SS_ID": "18xmQa0cR_yppzl-eEu0rDXhSpIYfeIC7PZH9jnbL4h4",
+    "SS_REKAP_ID": "1U6waJeIUpEBZq0zmOPsXgwEw-0mkMAXny55w9GCfn5k",
+    "KARYAWAN_SS_ID": "1T7oXtUeLv-Te4OZE0XRE1lNxnvFV7HzhtyInEGybU4k",
+    "PO_ID_PREFIX": "Maja_PO-SBY_",
+    "PO_GROUP_ID": "120363407049370326@g.us",
+    "PO_DRAFT_GROUP_ID": "120363423671613991@g.us",
+    "GUDANG_SHEETS": ["Gudang ALFA", "Gudang BETA", "Gudang OMEGA", "Gudang GAMMA"],
+    "PHOTO_FOLDER_BY_GUDANG": {
+      "Gudang ALFA": "1as2ZCz6tIXCCNmr5VNZvXcGtAYtfT42l",
+      "Gudang BETA": "14WJUdc0JtfjDEaqqPBhcNPdHJ-PVF1NJ", 
+      "Gudang OMEGA": "1-hCYsK9-QgqdNKJ5mD6Zphe6gf81CbgO",
+      "Gudang GAMMA": "1gjVciGMLukojQ4EmtyylWIpEvwG5nwwc"
+    }
+  },
+  "RHEE": {
+    "nama_perusahaan": "PT Rhee",
+    "SS_ID": "CONTOH_SS_ID_RHEE",
+    "SS_REKAP_ID": "CONTOH_REKAP_ID_RHEE",
+    "KARYAWAN_SS_ID": "CONTOH_KARYAWAN_RHEE",
+    "PO_ID_PREFIX": "Rhee_PO-SBY_",
+    "PO_GROUP_ID": "123_GROUP_RHEE@g.us",
+    "PO_DRAFT_GROUP_ID": "456_DRAFT_RHEE@g.us",
+    "GUDANG_SHEETS": ["Gudang UTAMA"],
+    "PHOTO_FOLDER_BY_GUDANG": {
+      "Gudang UTAMA": "CONTOH_FOLDER_RHEE"
+    }
+  }
+}

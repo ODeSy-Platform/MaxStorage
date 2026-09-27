@@ -1,0 +1,16 @@
+node_modules/
+*.bak
+*.bak2
+.env
+credentials.json
+backend/script_cache.json
+*.log
+server_new.js
+server_fixed.js
+po_lokasi_*.html
+check_*.js
+deploy_*.js
+create_repo.js
+fix_*.js
+get_*.js
+print_*.js
