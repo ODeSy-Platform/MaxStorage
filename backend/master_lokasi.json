@@ -52,5 +52,32 @@
       "Gudang OMEGA": "11f7GiDk67xwQi3xiIoXHNsPjjkRKXiS0",
       "Gudang GAMMA": "1Ouonj6hr2MZOPDQ9b6bdZ5lNt_Z9iVLf"
     }
+  },
+  "MSFLbk": {
+    "nama_perusahaan": "PT Maximus Shrimp Farm",
+    "SS_ID": "1t4UYYsn-5LCE_IcDs-7WUJsXUEzmhSpac2Lvti-pV5c",
+    "SS_REKAP_ID": "1FLCqfHa6T1RtwmmE-y8dRHgx5-OEHn2l0czWJgQosVE",
+    "KARYAWAN_SS_ID": "1LskIiJ8RU9HUsNPoszP-It3Ysd6ahNqLjd1tMlIKq1o",
+    "PO_ID_PREFIX": "MSFLbk_PO-SBY_",
+    "PO_GROUP_ID": "120363407049370326@g.us",
+    "PO_DRAFT_GROUP_ID": "120363423671613991@g.us",
+    "GUDANG_SHEETS": [
+      "Gudang ALFA",
+      "Gudang BETA",
+      "Gudang OMEGA",
+      "Gudang GAMMA"
+    ],
+    "PASS_MASTER": "msf.001",
+    "PASS_KIRIM_PO": "msf.002",
+    "PASS_INPUT": "msf.003",
+    "PDF_FOLDER_ID": "",
+    "TEMPLATE_SS_ID": "",
+    "WAHA_API_KEY": "apikeybaru123",
+    "PHOTO_FOLDER_BY_GUDANG": {
+      "Gudang ALFA": "1eDuAP0NzNcV-0UcZEgsiaNaHcxNrMfxQ",
+      "Gudang BETA": "15O4K6J903T21aJywWsD4MBfs06pWSw8F",
+      "Gudang OMEGA": "1vh3b8CvjsT0Ukm1_3IK8tQzme0AXGu5d",
+      "Gudang GAMMA": "1zV394WanDei7SWK_OIqmf-UisQGBxrwS"
+    }
   }
 }
