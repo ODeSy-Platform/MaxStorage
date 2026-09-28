@@ -1,0 +1,1582 @@
+
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+<script>
+
+      const toneMap = { blue: "tone-blue", green: "tone-green", amber: "tone-amber", violet: "tone-violet", teal: "tone-teal", slate: "tone-slate" };
+      const iconMap = { feed: "🐟", pond: "📍", solar: "⛽", permit: "📄", waste: "♻️", gear: "⚙️" };
+      let MAXMAR_LOGO_SRC = "";
+      let dashboardData = null;
+      let selectedCompanyId = "";
+      let currentAccessId = "";
+      function hydrateLogoImages() {
+        if (!MAXMAR_LOGO_SRC) return;
+        const bootLogo = document.getElementById("bootLogo");
+        const brandLogo = document.getElementById("brandLogo");
+        const topLogo = document.getElementById("topLogo");
+        const bootLogoImg = document.getElementById("bootLogoImg");
+        if (bootLogo) bootLogo.src = MAXMAR_LOGO_SRC;
+        if (brandLogo) brandLogo.src = MAXMAR_LOGO_SRC;
+        if (topLogo) topLogo.src = MAXMAR_LOGO_SRC;
+        if (bootLogoImg) bootLogoImg.src = MAXMAR_LOGO_SRC;
+      }
+
+      function loadLogoSource() {
+        loadLargeString("getLogoChunksCount", "getLogoChunk")
+          .then((logoSrc) => {
+            MAXMAR_LOGO_SRC = logoSrc || "";
+            hydrateLogoImages();
+          })
+          .catch((err) => {
+            console.error("Failed to load logo chunks:", err);
+          });
+      }
+
+      function initBootCanvas() {
+        const canvas = document.getElementById("bootCanvas");
+        if (!canvas) return () => {};
+        const ctx = canvas.getContext("2d");
+        let w = canvas.width = window.innerWidth;
+        let h = canvas.height = window.innerHeight;
+        
+        window.addEventListener("resize", () => {
+          w = canvas.width = window.innerWidth;
+          h = canvas.height = window.innerHeight;
+        });
+
+        // Space particles
+        const particles = [];
+        const numParticles = 40;
+        for (let i = 0; i < numParticles; i++) {
+          particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: Math.random() * 80 + 40,
+            color: `rgba(${Math.floor(Math.random() * 20)}, ${Math.floor(Math.random() * 80 + 40)}, ${Math.floor(Math.random() * 150 + 100)}, ${Math.random() * 0.12 + 0.03})`,
+            vx: Math.random() * 0.6 - 0.3,
+            vy: Math.random() * 0.4 - 0.2
+          });
+        }
+
+        // Tiny stars
+        const stars = [];
+        const numStars = 60;
+        for (let i = 0; i < numStars; i++) {
+          stars.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: Math.random() * 1.5 + 0.5,
+            opacity: Math.random() * 0.6 + 0.2,
+            blinkSpeed: Math.random() * 0.02 + 0.005
+          });
+        }
+
+        let animationFrameId;
+        function animate() {
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(0, 0, w, h);
+
+          // Draw space nebula glow (radial gradient)
+          const grad = ctx.createRadialGradient(w/2, h/2, 50, w/2, h/2, Math.max(w, h));
+          grad.addColorStop(0, "rgba(8, 20, 60, 0.45)");
+          grad.addColorStop(0.5, "rgba(2, 6, 20, 0.2)");
+          grad.addColorStop(1, "#000000");
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+
+          // Draw nebula particles (smoke)
+          particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // wrap around
+            if (p.x < -p.r) p.x = w + p.r;
+            if (p.x > w + p.r) p.x = -p.r;
+            if (p.y < -p.r) p.y = h + p.r;
+            if (p.y > h + p.r) p.y = -p.r;
+
+            ctx.beginPath();
+            const radGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+            radGrad.addColorStop(0, p.color);
+            radGrad.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = radGrad;
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // Draw stars
+          stars.forEach(s => {
+            s.opacity += s.blinkSpeed;
+            if (s.opacity > 0.8 || s.opacity < 0.2) s.blinkSpeed = -s.blinkSpeed;
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`;
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          animationFrameId = requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        return () => {
+          cancelAnimationFrame(animationFrameId);
+        };
+      }
+
+      function loadLargeString(countMethod, chunkMethod) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler((count) => {
+              if (count === 0) {
+                resolve("");
+                return;
+              }
+              const chunks = new Array(count);
+              function loadNext(index) {
+                if (index === count) {
+                  resolve(chunks.join(""));
+                  return;
+                }
+                google.script.run
+                  .withSuccessHandler((chunk) => {
+                    chunks[index] = chunk;
+                    loadNext(index + 1);
+                  })
+                  .withFailureHandler((err) => {
+                    reject(err);
+                  })
+                  [chunkMethod](index);
+              }
+              loadNext(0);
+            })
+            .withFailureHandler((err) => {
+              reject(err);
+            })
+            [countMethod]();
+        });
+      }
+
+      function runBootSequence() {
+        const logoContainer = document.getElementById("bootLogoContainer");
+        const bootLogoImg = document.getElementById("bootLogoImg");
+        if (bootLogoImg && MAXMAR_LOGO_SRC) {
+          bootLogoImg.src = MAXMAR_LOGO_SRC;
+        }
+        if (logoContainer) logoContainer.classList.add("show");
+        setTimeout(() => {
+          const bootScreen = document.getElementById("bootScreen");
+          if (bootScreen) {
+            bootScreen.classList.add("hidden");
+            document.body.classList.remove("booting");
+            setTimeout(() => {
+              bootScreen.remove();
+            }, 1000);
+          }
+        }, 1500);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function renderDashboard(data) {
+        dashboardData = data;
+        currentAccessId = data.defaultAccessId || (data.accessProfiles[0] && data.accessProfiles[0].id) || "";
+        selectedCompanyId = getAccessScopedSelectedCompanyId();
+        document.getElementById("loadingState").hidden = true;
+        
+        // Buka kunci panel modul
+        const modulPanel = document.querySelector('.sidebar-modul');
+        if (modulPanel) modulPanel.classList.remove('locked');
+
+        document.getElementById("dashboardRoot").hidden = false;
+        
+        const pageSub = document.getElementById("pageSubtitle");
+        if (pageSub) pageSub.textContent = data.subtitle;
+        
+        const genAt = document.getElementById("generatedAt");
+        if (genAt) genAt.textContent = `Update ${data.generatedAt} | ${data.buildVersion}`;
+        
+        renderTopbar();
+        renderMetricCards(getVisibleMetrics());
+        renderClusterMini(getVisibleClusters());
+        renderTips(data.tips || []);
+        renderAccessOptions(data.accessProfiles || []);
+        renderClusters(getVisibleClusters(), getVisibleCompanies());
+        renderNotices(data.notices || []);
+        renderSelectedCompany();
+        renderModules(data.modules || []);
+        bindAccessEvents();
+        initSidebarModulCollapse();
+      }
+
+      function getCurrentAccessProfile() {
+        return (dashboardData && (dashboardData.accessProfiles || []).find((profile) => profile.id === currentAccessId)) || null;
+      }
+
+      function getVisibleCompanies() {
+        if (!dashboardData) return [];
+        const access = getCurrentAccessProfile();
+        if (!access || access.scope === "all") return dashboardData.companies;
+        return dashboardData.companies.filter((company) => company.id === access.companyId);
+      }
+
+      function getVisibleClusters() {
+        if (!dashboardData) return [];
+        const visibleCompanyIds = new Set(getVisibleCompanies().map((company) => company.id));
+        return dashboardData.clusters.filter((cluster) => cluster.companyIds.some((id) => visibleCompanyIds.has(id)));
+      }
+
+      function getVisibleMetrics() {
+        if (!dashboardData) return [];
+        const visibleCompanies = getVisibleCompanies();
+        const visibleClusters = getVisibleClusters();
+        const activeCompanies = visibleCompanies.filter((company) => company.status === "Aktif").length;
+        return [
+          { label: "Total Cluster", value: visibleClusters.length, detail: "Cluster yang bisa diakses" },
+          { label: "Total Perusahaan", value: visibleCompanies.length, detail: "Perusahaan dalam scope login" },
+          { label: "Perusahaan Aktif", value: activeCompanies, detail: `${visibleCompanies.length - activeCompanies} masih setup` },
+          { label: "Live Site", value: visibleCompanies.reduce((sum, company) => sum + company.metrics.liveSites, 0), detail: "Akumulasi tampilan detail" },
+          { label: "User Aktif", value: visibleCompanies.reduce((sum, company) => sum + company.metrics.activeUsers, 0), detail: "Akun operasional terdaftar" }
+        ];
+      }
+
+      function getAccessScopedSelectedCompanyId() {
+        const visibleCompanies = getVisibleCompanies();
+        if (!visibleCompanies.length) return "";
+        if (visibleCompanies.some((company) => company.id === selectedCompanyId)) return selectedCompanyId;
+        const preferred = getCurrentAccessProfile();
+        if (preferred && preferred.scope === "company" && preferred.companyId) return preferred.companyId;
+        return visibleCompanies[0].id;
+      }
+
+      function renderTopbar() {
+        const access = getCurrentAccessProfile();
+        if (!access) return;
+
+        const profileCard = document.getElementById("profileCard");
+        profileCard.innerHTML = `
+          <div class="avatar">${escapeHtml(access.avatarInitials || "AD")}</div>
+          <div>
+            <strong>${escapeHtml(access.name)}</strong>
+            <small>${escapeHtml(access.role)}</small>
+          </div>
+        `;
+
+        const dateCard = document.getElementById("dateCard");
+        dateCard.innerHTML = `
+          <div class="date-icon">🗓</div>
+          <div>
+            <strong>${escapeHtml(dashboardData.currentDateLabel || "")}</strong>
+            <small>${escapeHtml(dashboardData.currentTimeLabel || "")}</small>
+          </div>
+        `;
+
+        const accessButton = document.getElementById("accessButton");
+        if (accessButton) {
+          accessButton.innerHTML = `
+            <strong>${escapeHtml(access.scope === "all" ? "Mode Super Admin" : "Mode Perusahaan")}</strong>
+            <small>${escapeHtml(access.scope === "all" ? "Akses semua cluster" : access.name)}</small>
+          `;
+        }
+
+        document.getElementById("notifCount").textContent = String(access.notificationCount || 0);
+      }
+
+      function renderAccessOptions(profiles) {
+        const select = document.getElementById("accessSelect");
+        select.innerHTML = profiles.map((profile) => `
+          <option value="${escapeHtml(profile.id)}" ${profile.id === currentAccessId ? "selected" : ""}>
+            ${escapeHtml(profile.role)} - ${escapeHtml(profile.name)}
+          </option>
+        `).join("");
+      }
+
+      function bindAccessEvents() {
+        const accBtn = document.getElementById("accessButton");
+        if (accBtn) accBtn.onclick = () => openAccessModal();
+        document.getElementById("closeAccessModal").onclick = () => closeAccessModal();
+        document.getElementById("applyAccessButton").onclick = () => applyAccessSelection();
+      }
+
+      function openAccessModal() {
+        document.getElementById("loginOverlay").classList.add("open");
+      }
+
+      function closeAccessModal() {
+        document.getElementById("loginOverlay").classList.remove("open");
+      }
+
+      function applyAccessSelection() {
+        currentAccessId = document.getElementById("accessSelect").value;
+        selectedCompanyId = getAccessScopedSelectedCompanyId();
+        
+        // Pastikan kembali ke dashboard utama saat mengganti akses profil
+        document.getElementById("dashboardRoot").hidden = false;
+        document.getElementById("moduleView").hidden = true;
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+
+        renderTopbar();
+        renderMetricCards(getVisibleMetrics());
+        renderClusterMini(getVisibleClusters());
+        renderClusters(getVisibleClusters(), getVisibleCompanies());
+        renderSelectedCompany();
+        closeAccessModal();
+      }
+
+      function renderMetricCards(cards) {
+        const root = document.getElementById("metricCards");
+        root.innerHTML = cards.map((card) => `
+          <article class="metric-card">
+            <p class="metric-label">${escapeHtml(card.label)}</p>
+            <h3 class="metric-value">${escapeHtml(card.value)}</h3>
+            <p class="metric-detail">${escapeHtml(card.detail)}</p>
+          </article>
+        `).join("");
+      }
+
+            function renderClusterMini(clusters) {
+        const root = document.getElementById("clusterMiniList");
+        if (!root) return;
+        
+        root.innerHTML = clusters.map((cluster) => {
+          const cleanClusterName = cluster.name.replace(/^(cl|clu)ster\s+/i, "").trim();
+          const clusterCompanies = (dashboardData.companies || []).filter(
+            (c) => c.cluster === cluster.id || c.cluster.toLowerCase() === cleanClusterName.toLowerCase()
+          );
+          
+          const listId = `sidebar-comp-list-${cluster.id}`;
+          const activeCount = clusterCompanies.filter(c => c.status === 'Aktif').length;
+          
+          return `
+            <div class="modul-group">
+              <div class="modul-item" onclick="toggleSidebarCluster(this, '${listId}')">
+                <span class="modul-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                </span>
+                <div class="modul-text" style="display: flex; flex-direction: column;">
+                  <span style="font-size: 0.95rem; font-weight: 600;">${escapeHtml(cleanClusterName)}</span>
+                  <span style="font-size: 0.7rem; color: rgba(238,246,255,0.5);">${clusterCompanies.length} prs · ${activeCount} on</span>
+                </div>
+                <span class="submenu-arrow">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </span>
+              </div>
+              <div class="submenu-container" id="${listId}">
+                ${clusterCompanies.map(comp => `
+                  <div class="submenu-item sidebar-comp-item ${comp.id === selectedCompanyId ? 'active' : ''}" 
+                       data-id="${escapeHtml(comp.id)}" 
+                       onclick="selectCompanyFromSidebar('${escapeHtml(comp.id)}')">
+                    <span class="item-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>
+                    <span class="item-text">${escapeHtml(comp.name)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      function renderTips(tips) {
+        const root = document.getElementById("tipList");
+        if (!root) return;
+        root.innerHTML = tips.map((tip, index) => `
+          <div class="tip-item">
+            <strong>Langkah ${index + 1}</strong>
+            <small>${escapeHtml(tip)}</small>
+          </div>
+        `).join("");
+      }
+
+      function renderClusters(clusters, companies) {
+        const root = document.getElementById("clusterGrid");
+        root.innerHTML = clusters.map((cluster) => {
+          const clusterCompanies = companies.filter((company) => cluster.companyIds.includes(company.id));
+          return `
+            <section class="cluster-card">
+              <div class="cluster-top">
+                <div>
+                  <h3>${escapeHtml(cluster.name)}</h3>
+                  <p>${escapeHtml(cluster.companyCount)} perusahaan · ${escapeHtml(cluster.connectedCompanies)} aktif</p>
+                </div>
+                <span class="badge ${cluster.status === "Aktif" ? "active" : "setup"}">${escapeHtml(cluster.status)}</span>
+              </div>
+              <div class="cluster-stats">
+                <div class="stat-box"><strong>${escapeHtml(cluster.companyCount)}</strong><small>Perusahaan</small></div>
+                <div class="stat-box"><strong>${escapeHtml(cluster.connectedCompanies)}</strong><small>Aktif</small></div>
+                <div class="stat-box"><strong>${escapeHtml(cluster.totalSites)}</strong><small>Live site</small></div>
+              </div>
+              <div class="company-list">
+                ${clusterCompanies.map((company) => `
+                  <button type="button" class="company-pill ${company.id === selectedCompanyId ? "active" : ""}" data-company-id="${escapeHtml(company.id)}">
+                    <div class="company-pill-top">
+                      <div>
+                        <strong>${escapeHtml(company.name)}</strong>
+                        <small>${escapeHtml(company.code)} · ${escapeHtml(company.region)}</small>
+                      </div>
+                      <span class="badge ${company.status === "Aktif" ? "active" : "setup"}">${escapeHtml(company.status)}</span>
+                    </div>
+                    <div class="company-meta">
+                      <span>${escapeHtml(company.latestPeriodLabel)}</span>
+                      <span>${escapeHtml(company.summary)}</span>
+                    </div>
+                  </button>
+                `).join("")}
+              </div>
+            </section>
+          `;
+        }).join("");
+
+        root.querySelectorAll("[data-company-id]").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectedCompanyId = button.getAttribute("data-company-id") || "";
+            
+            // Kembali ke dashboard utama
+            document.getElementById("dashboardRoot").hidden = false;
+            document.getElementById("moduleView").hidden = true;
+            
+            // Sembunyikan sidebar modul secara otomatis jika tidak sedang dipin
+            if (!isModulPinned) {
+              collapseModulSidebar();
+            }
+            
+            // Reset state aktif submenu modul agar konsisten
+            document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+
+            renderClusters(dashboardData.clusters, dashboardData.companies);
+            renderSelectedCompany();
+            
+            // Sinkronisasi kelas active ke sidebar list perusahaan
+            document.querySelectorAll('.sidebar-comp-item').forEach(item => {
+              item.classList.remove('active');
+              if (item.getAttribute('data-id') === selectedCompanyId) {
+                item.classList.add('active');
+                
+                // Buka cluster induknya secara otomatis jika tertutup
+                const parentList = item.parentElement;
+                const parentClusterItem = parentList.previousElementSibling;
+                if (parentList && !parentList.classList.contains('open')) {
+                  parentList.classList.add('open');
+                  if (parentClusterItem) parentClusterItem.classList.add('open');
+                }
+              }
+            });
+          });
+        });
+      }
+
+      function getSelectedCompany() {
+        return getVisibleCompanies().find((company) => company.id === selectedCompanyId) || null;
+      }
+
+      function renderSelectedCompany() {
+        const company = getSelectedCompany();
+        if (!company) return;
+
+        // Update lokasi cuaca online secara live
+        updateLiveWeather(company.cluster);
+
+        document.getElementById("detailCompany").innerHTML = `
+          <div>
+            <h3>${escapeHtml(company.name)}</h3>
+            <p>${escapeHtml(company.cluster)} · ${escapeHtml(company.region)} · ${escapeHtml(company.code)}</p>
+            <small>Terakhir update: ${escapeHtml(company.metrics.lastUpdated)}</small>
+          </div>
+          <div><span class="badge ${company.status === "Aktif" ? "active" : "setup"}">${escapeHtml(company.status)}</span></div>
+        `;
+
+        document.getElementById("detailMetrics").innerHTML = `
+          <div class="detail-metric"><small>Live Site</small><strong>${escapeHtml(company.metrics.liveSites)}</strong></div>
+          <div class="detail-metric"><small>User Aktif</small><strong>${escapeHtml(company.metrics.activeUsers)}</strong></div>
+          <div class="detail-metric"><small>Perizinan</small><strong>${escapeHtml(company.metrics.permissions)}</strong></div>
+          <div class="detail-metric"><small>Finance</small><strong>${escapeHtml(company.metrics.finance)}</strong></div>
+        `;
+
+        document.getElementById("detailProgress").textContent = company.metrics.highlight;
+        renderQuickGrid(company.quickMenu || []);
+        renderStatus(company.statusRows || [], company.coveragePercent);
+        renderActivities(company.activities || []);
+        renderMonthly(company.monthlyCards || []);
+        drawChart(company.chart);
+      }
+
+      function renderQuickGrid(items) {
+        const root = document.getElementById("quickGrid");
+        root.innerHTML = items.map((item) => `
+          <div class="quick-card">
+            <div class="quick-icon ${toneMap[item.tone] || "tone-blue"}">${escapeHtml(iconMap[item.icon] || "•")}</div>
+            <strong>${escapeHtml(item.label)}</strong>
+            <small>${escapeHtml(item.tone || "")}</small>
+          </div>
+        `).join("");
+      }
+
+      function renderStatus(rows, coveragePercent) {
+        const root = document.getElementById("statusList");
+        root.innerHTML = rows.map((row) => `
+          <div class="status-item">
+            <div class="status-row">
+              <div><strong>${escapeHtml(row.label)}</strong><small>${escapeHtml(row.status)}</small></div>
+              <div><strong>${escapeHtml(row.value)}</strong><small>${escapeHtml(row.suffix)}</small></div>
+            </div>
+            <div class="progress"><span style="width:${coveragePercent}%"></span></div>
+          </div>
+        `).join("");
+      }
+
+      function renderActivities(items) {
+        const root = document.getElementById("activityList");
+        root.innerHTML = items.map((item) => `
+          <div class="activity-item">
+            <strong>${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.detail)}</small>
+            <small>${escapeHtml(item.time)}</small>
+          </div>
+        `).join("");
+      }
+
+      function renderMonthly(items) {
+        const root = document.getElementById("monthlyList");
+        root.innerHTML = items.map((item) => `
+          <div class="monthly-item">
+            <div class="monthly-row">
+              <div><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.change)}</small></div>
+              <div><strong>${escapeHtml(item.value)}</strong></div>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      function renderNotices(items) {
+        const root = document.getElementById("noticeList");
+        root.innerHTML = items.map((item) => `
+          <div class="notice">
+            <strong>${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.detail)}</small>
+          </div>
+        `).join("");
+      }
+
+      function drawChart(chart) {
+        window.__companyChartData = chart;
+        const canvas = document.getElementById("companyChart");
+        const context = canvas.getContext("2d");
+        const pixelRatio = window.devicePixelRatio || 1;
+        const bounds = canvas.getBoundingClientRect();
+        const width = bounds.width || canvas.width;
+        const height = bounds.height || canvas.height;
+        canvas.width = width * pixelRatio;
+        canvas.height = height * pixelRatio;
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.clearRect(0, 0, width, height);
+
+        const padding = { top: 18, right: 18, bottom: 34, left: 26 };
+        const plotWidth = width - padding.left - padding.right;
+        const plotHeight = height - padding.top - padding.bottom;
+        const maxValue = Math.max(...chart.series.flatMap((item) => item.values), 1);
+
+        context.strokeStyle = "rgba(148, 163, 184, 0.22)";
+        for (let step = 0; step <= 4; step += 1) {
+          const y = padding.top + (plotHeight / 4) * step;
+          context.beginPath();
+          context.moveTo(padding.left, y);
+          context.lineTo(width - padding.right, y);
+          context.stroke();
+        }
+
+        context.fillStyle = "#64748b";
+        context.font = "12px Plus Jakarta Sans";
+        chart.labels.forEach((label, index) => {
+          const x = padding.left + (plotWidth / (chart.labels.length - 1 || 1)) * index;
+          context.fillText(label, x - 10, height - 10);
+        });
+
+        chart.series.forEach((series) => {
+          context.beginPath();
+          context.lineWidth = 3;
+          context.strokeStyle = series.color;
+          series.values.forEach((value, index) => {
+            const x = padding.left + (plotWidth / (series.values.length - 1 || 1)) * index;
+            const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
+            if (index === 0) context.moveTo(x, y);
+            else context.lineTo(x, y);
+          });
+          context.stroke();
+
+          series.values.forEach((value, index) => {
+            const x = padding.left + (plotWidth / (series.values.length - 1 || 1)) * index;
+            const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
+            context.beginPath();
+            context.fillStyle = series.color;
+            context.arc(x, y, 4, 0, Math.PI * 2);
+            context.fill();
+          });
+        });
+      }
+
+      function showError(message) {
+        document.getElementById("loadingState").hidden = true;
+        const box = document.getElementById("errorState");
+        box.hidden = false;
+        box.textContent = message;
+      }
+
+      window.addEventListener("resize", () => {
+        if (window.__companyChartData) drawChart(window.__companyChartData);
+      });
+      runBootSequence();
+
+      google.script.run
+        .withSuccessHandler(renderDashboard)
+        .withFailureHandler((error) => showError(error && error.message ? error.message : "Gagal memuat dashboard"))
+        .getDashboardData();
+      
+      // RESIZER LOGIC
+      (function() {
+        const resizer = document.getElementById("resizer");
+        const layout = document.getElementById("dashboardLayout");
+        let dragStartX = 0;
+        let startWidth = 270;
+
+        resizer.addEventListener("pointerdown", function(e) {
+          e.preventDefault();
+          resizer.setPointerCapture(e.pointerId);
+          resizer.classList.add("dragging");
+              document.body.classList.add("is-resizing");
+          document.body.style.userSelect = "none";
+          dragStartX = e.clientX;
+          // Get current width from computed style
+          const computed = window.getComputedStyle(layout).getPropertyValue("--sidebar-width");
+          startWidth = parseFloat(computed) || 270;
+        });
+
+        resizer.addEventListener("pointermove", function(e) {
+          if (!resizer.hasPointerCapture(e.pointerId)) return;
+          const dx = e.clientX - dragStartX;
+          const newWidth = Math.max(150, Math.min(600, startWidth + dx));
+          layout.style.setProperty("--sidebar-width", newWidth + "px");
+        });
+
+        function endDrag(e) {
+          resizer.releasePointerCapture(e.pointerId);
+          resizer.classList.remove("dragging");
+              document.body.classList.remove("is-resizing");
+          document.body.style.userSelect = "";
+        }
+        resizer.addEventListener("pointerup",     endDrag);
+        resizer.addEventListener("pointercancel", endDrag);
+      })();
+
+      
+      // RESIZER MODUL LOGIC
+      (function() {
+        const resizerModul = document.getElementById("resizer-modul");
+        const layout = document.getElementById("dashboardLayout");
+        let dragStartX = 0;
+        let startWidth = 240;
+
+        if (resizerModul) {
+            resizerModul.addEventListener("pointerdown", function(e) {
+              e.preventDefault();
+              resizerModul.setPointerCapture(e.pointerId);
+              resizerModul.classList.add("dragging");
+              document.body.classList.add("is-resizing");
+              document.body.style.userSelect = "none";
+              dragStartX = e.clientX;
+              const computed = window.getComputedStyle(layout).getPropertyValue("--sidebar-modul-width");
+              startWidth = parseFloat(computed) || 240;
+            });
+
+            resizerModul.addEventListener("pointermove", function(e) {
+              if (!resizerModul.hasPointerCapture(e.pointerId)) return;
+              const dx = e.clientX - dragStartX;
+              const newWidth = Math.max(150, Math.min(500, startWidth + dx));
+              layout.style.setProperty("--sidebar-modul-width", newWidth + "px");
+            });
+
+            function endDrag(e) {
+              resizerModul.releasePointerCapture(e.pointerId);
+              resizerModul.classList.remove("dragging");
+              document.body.classList.remove("is-resizing");
+              document.body.style.userSelect = "";
+            }
+            resizerModul.addEventListener("pointerup",     endDrag);
+            resizerModul.addEventListener("pointercancel", endDrag);
+        }
+      })();
+
+      loadLogoSource();
+      document.body.classList.add("booting");
+
+      // ── Pinch-to-Zoom untuk HP Android ─────────────────────────────────────
+      // Target: #zoomHost (scrollable). Zoom = CSS zoom layout.
+      (function() {
+        var host    = document.getElementById("zoomHost");
+        var layout  = document.getElementById("dashboardLayout");
+        var curScale = 1;
+        var pinching = false;
+        var startDist = 0, startScale = 1;
+        var startScrollX = 0, startScrollY = 0;
+        var startMidX = 0, startMidY = 0;
+
+        function getDistance(t) {
+          var dx = t[0].clientX - t[1].clientX;
+          var dy = t[0].clientY - t[1].clientY;
+          return Math.sqrt(dx * dx + dy * dy);
+        }
+        function getMid(t) {
+          return {
+            x: (t[0].clientX + t[1].clientX) / 2,
+            y: (t[0].clientY + t[1].clientY) / 2
+          };
+        }
+        function applyZoom() {
+          layout.style.zoom = curScale;
+          layout.style.height = (100 / (curScale || 1)) + "vh";
+        }
+
+        // Auto-fit agar di HP langsung tampil full layout (1280px) fit ke lebar layar HP
+        function fitToScreen() {
+          if (window.innerWidth < 1280) {
+            curScale = window.innerWidth / 1280;
+          } else {
+            curScale = 1;
+          }
+          applyZoom();
+        }
+
+        // Jalankan fitToScreen saat pertama kali dimuat
+        fitToScreen();
+        // Ulangi beberapa kali setelah boot screen hilang agar presisi
+        setTimeout(fitToScreen, 500);
+        setTimeout(fitToScreen, 1500);
+
+        // Auto-fit saat orientasi HP diputar (portrait <-> landscape)
+        window.addEventListener("resize", function() {
+          if (!pinching) {
+            fitToScreen();
+          }
+        });
+
+        host.addEventListener("touchstart", function(e) {
+          if (e.touches.length === 2) {
+            pinching    = true;
+            startDist   = getDistance(e.touches);
+            startScale  = curScale;
+            var m       = getMid(e.touches);
+            startMidX   = m.x;
+            startMidY   = m.y;
+            startScrollX = host.scrollLeft;
+            startScrollY = host.scrollTop;
+          }
+        }, { passive: true });
+
+        host.addEventListener("touchmove", function(e) {
+          if (e.touches.length === 2 && pinching) {
+            e.preventDefault();
+            var newDist  = getDistance(e.touches);
+            // Batas minimal zoom diatur sangat kecil agar bisa mencubit mengecil di HP
+            var minLimit = window.innerWidth < 1280 ? (window.innerWidth / 1280) * 0.3 : 0.15;
+            curScale     = Math.max(minLimit, Math.min(4, startScale * (newDist / startDist)));
+            var m        = getMid(e.touches);
+            var scaleRatio = curScale / startScale;
+            host.scrollLeft = (startScrollX + startMidX) * scaleRatio - m.x;
+            host.scrollTop  = (startScrollY + startMidY) * scaleRatio - m.y;
+            applyZoom();
+          }
+        }, { passive: false });
+
+        host.addEventListener("touchend", function(e) {
+          if (e.touches.length < 2) {
+            pinching = false;
+            // Hanya snap kembali jika skala dicubit sangat ekstrem kecil (di bawah 40% lebar layar)
+            var fitScale = window.innerWidth < 1280 ? (window.innerWidth / 1280) : 1;
+            if (curScale < fitScale * 0.4) {
+              fitToScreen();
+              host.scrollLeft = 0;
+              host.scrollTop  = 0;
+            }
+          }
+        }, { passive: true });
+      })();
+      function selectModul(el, name) {
+        // Cek apakah PT/Perusahaan sudah dipilih
+        if (!selectedCompanyId) {
+          showToast('⚠️ Pilih Cluster dan PT terlebih dahulu sebelum membuka modul!', 'warning');
+          return;
+        }
+
+        document.querySelectorAll('.modul-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+        el.classList.add('active');
+        
+        // Tutup semua submenu container saat memilih modul utama non-submenu
+        document.querySelectorAll('.submenu-container').forEach(menu => {
+          menu.classList.remove('open');
+        });
+        document.querySelectorAll('.modul-item').forEach(item => {
+          item.classList.remove('open');
+        });
+
+        // Kembalikan ke dashboard utama
+        document.getElementById("dashboardRoot").hidden = false;
+        document.getElementById("moduleView").hidden = true;
+        console.log("Selected Module:", name);
+      }
+
+      function showToast(message, type = 'info') {
+        let toast = document.getElementById('odesyToast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.id = 'odesyToast';
+          toast.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#fff;padding:12px 22px;border-radius:12px;font-size:0.92rem;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.35);z-index:9999;transition:transform 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.35s;opacity:0;border-left:4px solid #38bdf8;display:flex;align-items:center;gap:10px;white-space:nowrap;';
+          document.body.appendChild(toast);
+        }
+        if (type === 'warning') toast.style.borderLeftColor = '#f59e0b';
+        else if (type === 'error') toast.style.borderLeftColor = '#ef4444';
+        else toast.style.borderLeftColor = '#38bdf8';
+        toast.textContent = message;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(-50%) translateY(80px)';
+        }, 3200);
+      }
+
+      function getModuleIcon(name) {
+        const normalized = name.toLowerCase().replace(/\s+/g, '');
+        if (normalized.includes('budidaya')) return '🐟';
+        if (normalized.includes('hm') || normalized.includes('km') || normalized.includes('jam')) return '🚚';
+        if (normalized.includes('gudang') || normalized.includes('inventory')) return '🏢';
+        if (normalized.includes('solar') || normalized.includes('bbm') || normalized.includes('bakar')) return '⛽';
+        if (normalized.includes('limbah') || normalized.includes('b3') || normalized.includes('recycle')) return '♻️';
+        if (normalized.includes('izin') || normalized.includes('perizinan') || normalized.includes('legal')) return '📝';
+        if (normalized.includes('po') || normalized.includes('surabaya') || normalized.includes('purchase')) return '🛍️';
+        if (normalized.includes('keuangan') || normalized.includes('uang') || normalized.includes('finance') || normalized.includes('kas')) return '🪙';
+        if (normalized.includes('sdm') || normalized.includes('hrd') || normalized.includes('karyawan') || normalized.includes('staff')) return '👥';
+        if (normalized.includes('kendaraan') || normalized.includes('mobil') || normalized.includes('motor')) return '🚗';
+        if (normalized.includes('dokumen') || normalized.includes('dokumentasi') || normalized.includes('file')) return '📄';
+        if (normalized.includes('lapor') || normalized.includes('laporan') || normalized.includes('report')) return '📊';
+        return '📦';
+      }
+
+            function renderModules(modules) {
+        const listContainer = document.querySelector('.modul-list');
+        if (!listContainer) return;
+        
+        if (!modules || modules.length === 0) {
+          listContainer.innerHTML = '<div style="padding:10px 14px;color:rgba(255,255,255,0.4);font-size:0.9rem;">Tidak ada modul</div>';
+          return;
+        }
+        
+        listContainer.innerHTML = modules.map((modul, index) => {
+          const icon = getModuleIcon(modul.name || modul);
+          const nameClean = (modul.name || modul).trim();
+          const categories = modul.categories || [];
+          
+          if (categories.length > 0) {
+            const subMenuId = `submenu-${nameClean.replace(/\s+/g, '')}`;
+            
+            return `
+              <div class="modul-group">
+                <div class="modul-item" onclick="toggleSubmenu(this, '${subMenuId}')">
+                  <span class="modul-icon">${icon}</span>
+                  <span class="modul-text">${escapeHtml(nameClean)}</span>
+                  <span class="submenu-arrow">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </span>
+                </div>
+                <div class="submenu-container" id="${subMenuId}">
+                  ${categories.map(cat => {
+                    const catId = `cat-${nameClean.replace(/\s+/g, '')}-${cat.name.replace(/\s+/g, '')}`;
+                    return `
+                      <div class="modul-category-group">
+                        <div class="submenu-category" onclick="toggleSubCategory(event, this, '${catId}')">
+                          <span class="cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
+                          <span class="category-text">${escapeHtml(cat.name)}</span>
+                          <span class="category-arrow">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                          </span>
+                        </div>
+                        <div class="sub-category-container" id="${catId}">
+                          ${cat.items.map(item => `
+                            <div class="submenu-item" onclick="openWebAppUrl(event, '${item.url}')">
+                              <span class="item-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></span>
+                              <span class="item-text">${escapeHtml(item.name)}</span>
+                            </div>
+                          `).join('')}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }
+          
+          return `
+            <div class="modul-item" onclick="selectModul(this, '${escapeHtml(nameClean)}')">
+              <span class="modul-icon">${icon}</span>
+              <span class="modul-text">${escapeHtml(nameClean)}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function toggleSubCategory(event, el, catId) {
+        event.stopPropagation();
+        const catContainer = document.getElementById(catId);
+        if (!catContainer) return;
+        
+        const isOpen = catContainer.classList.contains('open');
+        
+        if (isOpen) {
+          catContainer.classList.remove('open');
+          el.classList.remove('open');
+        } else {
+          catContainer.classList.add('open');
+          el.classList.add('open');
+        }
+      }
+
+      function toggleSubmenu(el, subMenuId) {
+        const subMenu = document.getElementById(subMenuId);
+        if (!subMenu) return;
+        
+        const isOpen = subMenu.classList.contains('open');
+        
+        // Toggle submenu terpilih
+        if (isOpen) {
+          subMenu.classList.remove('open');
+          el.classList.remove('open');
+          // Tutup kategori di dalamnya
+          subMenu.querySelectorAll('.sub-category-container').forEach(sc => sc.classList.remove('open'));
+          subMenu.querySelectorAll('.submenu-category').forEach(sc => sc.classList.remove('open'));
+        } else {
+          subMenu.classList.add('open');
+          el.classList.add('open');
+          // Otomatis buka kategori di dalamnya agar user langsung melihat item
+          subMenu.querySelectorAll('.sub-category-container').forEach(sc => sc.classList.add('open'));
+          subMenu.querySelectorAll('.submenu-category').forEach(sc => sc.classList.add('open'));
+        }
+      }
+
+      function openWebAppUrl(event, url) {
+        event.stopPropagation();
+        
+        // Hilangkan class active dari modul/submenu lain
+        document.querySelectorAll('.modul-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+        
+        const el = event.currentTarget;
+        el.classList.add('active');
+        
+        // Highlight juga modul induknya
+        const parentGroup = el.closest('.modul-group');
+        if (parentGroup) {
+          const parentItem = parentGroup.querySelector('.modul-item');
+          if (parentItem) parentItem.classList.add('active');
+        }
+        
+        // Tambahkan context cluster dan company ke URL
+        let finalUrl = url;
+        if (finalUrl && finalUrl.trim() !== "") {
+          try {
+            // Check if URL is a JSON string for company-specific routing
+            if (finalUrl.startsWith('{')) {
+               const urlMap = JSON.parse(finalUrl);
+               finalUrl = urlMap[selectedCompanyId] || urlMap['DEFAULT'];
+               if (!finalUrl) {
+                 alert("Akses Ditolak:\nPerusahaan " + selectedCompanyId + " belum dikonfigurasi untuk modul ini (Data / Folder belum tersedia).");
+                 return;
+               }
+            }
+          } catch(e) {}
+
+          if (finalUrl) {
+            const sep = finalUrl.includes('?') ? '&' : '?';
+            const company = getVisibleCompanies().find(c => c.id === selectedCompanyId);
+            const currentClusterId = company ? company.cluster : '';
+            const companyCode = company ? (company.code || '') : '';
+            finalUrl += `${sep}lokasi=${encodeURIComponent(companyCode)}&clusterId=${encodeURIComponent(currentClusterId)}&companyId=${encodeURIComponent(selectedCompanyId || '')}&v=${Date.now()}`;
+          }
+        }
+        
+        // Alihkan layar ke Module View (iframe)
+        document.getElementById("dashboardRoot").hidden = true;
+        const viewContainer = document.getElementById("moduleView");
+        viewContainer.hidden = false;
+        
+        viewContainer.innerHTML = `
+          <div class="iframe-container" style="width:100%; height:100%; display:flex; flex-direction:column; min-height:0;">
+            <div class="iframe-header" style="padding: 10px 20px; background: white; border-bottom: 1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-weight:600; color:#0f172a;">${escapeHtml(el.textContent.trim())}</span>
+              <button onclick="showDashboardMain()" style="padding:4px 10px; background:#f1f5f9; border:none; border-radius:6px; cursor:pointer; font-size:12px; color:#475569;">Tutup Aplikasi</button>
+            </div>
+            <iframe src="${finalUrl}" style="width:100%; flex:1; border:none;" title="Web App View"></iframe>
+          </div>
+        `;
+      }
+
+      function showDashboardMain() {
+        document.getElementById("dashboardRoot").hidden = false;
+        document.getElementById("moduleView").hidden = true;
+        
+        if (!isModulPinned) {
+          collapseModulSidebar();
+        }
+        
+        document.querySelectorAll('.modul-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.submenu-container').forEach(menu => menu.classList.remove('open'));
+        document.querySelectorAll('.sub-category-container').forEach(menu => menu.classList.remove('open'));
+        document.querySelectorAll('.modul-item').forEach(item => item.classList.remove('open'));
+        document.querySelectorAll('.submenu-category').forEach(item => item.classList.remove('open'));
+        
+        const firstModul = document.querySelector('.modul-item');
+        if (firstModul) firstModul.classList.add('active');
+      }
+
+      function getModuleIntroIcon(subName) {
+        if (subName === 'Pakan') return '🌾';
+        if (subName === 'Saprotam') return '🧪';
+        if (subName === 'Laboratorium') return '🔬';
+        if (subName === 'Aplikasi') return '💻';
+        if (subName === 'Stok Opname (SO)') return '📋';
+        if (subName === 'Laporan') return '📊';
+        return '📁';
+      }
+
+      function renderSubViewContent(parentName, subName) {
+        const viewContainer = document.getElementById("moduleView");
+        if (!viewContainer) return;
+        
+        const introIcon = getModuleIntroIcon(subName);
+        let detailHtml = '';
+        
+        if (parentName === 'Budidaya') {
+          // Mock data PDF realistis
+          let docs = [];
+          if (subName === 'Pakan') {
+            docs = [
+              { title: "SOP Pemberian Pakan Udang Vaname.pdf", date: "15 Jul 2026", size: "1.2 MB" },
+              { title: "Laporan Distribusi Pakan Mingguan - Juli 2026.pdf", date: "12 Jul 2026", size: "3.4 MB" },
+              { title: "Analisis FCR & Nutrisi Pakan Mandiri.pdf", date: "08 Jul 2026", size: "850 KB" },
+              { title: "Form Monitoring Pakan Harian.pdf", date: "05 Jul 2026", size: "420 KB" }
+            ];
+          } else if (subName === 'Saprotam') {
+            docs = [
+              { title: "Daftar Inventaris Alat & Bahan Kimia Tambak.pdf", date: "14 Jul 2026", size: "980 KB" },
+              { title: "SOP Karantina Air & Persiapan Kolam.pdf", date: "10 Jul 2026", size: "1.5 MB" },
+              { title: "Purchase Order Saprotam Q2 2026.pdf", date: "05 Jul 2026", size: "2.1 MB" },
+              { title: "Sertifikat Kualitas Benur & Probiotik.pdf", date: "01 Jul 2026", size: "1.1 MB" }
+            ];
+          } else if (subName === 'Laboratorium') {
+            docs = [
+              { title: "Laporan Uji Kualitas Air Mingguan.pdf", date: "16 Jul 2026", size: "1.8 MB" },
+              { title: "Hasil Analisis Bakteri Vibrio Kolam 3 & 4.pdf", date: "14 Jul 2026", size: "750 KB" },
+              { title: "SOP Pemeriksaan PCR Penyakit Udang (WSSV).pdf", date: "11 Jul 2026", size: "1.3 MB" },
+              { title: "Grafik Perkembangan Parameter Fisiko-Kimia.pdf", date: "06 Jul 2026", size: "2.5 MB" }
+            ];
+          }
+          
+          detailHtml = `
+            <div class="document-section">
+              <div class="section-heading">Dokumen PDF Tersimpan</div>
+              <div class="document-grid">
+                ${docs.map(doc => `
+                  <div class="document-card" onclick="alert('Simulasi: Membuka berkas PDF \\'${doc.title}\\'')">
+                    <div class="doc-icon-box">📄</div>
+                    <div class="doc-info">
+                      <h4 class="doc-title" title="${escapeHtml(doc.title)}">${escapeHtml(doc.title)}</h4>
+                      <span class="doc-meta">${doc.date} | ${doc.size}</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        } else if (parentName === 'Gudang') {
+          if (subName === 'Aplikasi') {
+            detailHtml = `
+              <div class="table-view-panel">
+                <div class="section-heading">Log Pengajuan Aplikasi Gudang</div>
+                <table class="view-table">
+                  <thead>
+                    <tr>
+                      <th>No Tiket</th>
+                      <th>Detail Pengajuan</th>
+                      <th>Tanggal</th>
+                      <th>Petugas Lapangan</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>#TKT-99101</strong></td>
+                      <td>Pengeluaran Pakan Grow-Out Kolam 2</td>
+                      <td>17 Jul 2026</td>
+                      <td>Ahmad Fauzi</td>
+                      <td><span class="badge badge-success">Selesai</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>#TKT-99102</strong></td>
+                      <td>Refill BBM Solar Generator Cadangan</td>
+                      <td>17 Jul 2026</td>
+                      <td>Budi Santoso</td>
+                      <td><span class="badge badge-warning">Proses</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>#TKT-99103</strong></td>
+                      <td>Pengambilan Disinfektan & Klorin Kolam 5</td>
+                      <td>16 Jul 2026</td>
+                      <td>Hendra Wijaya</td>
+                      <td><span class="badge badge-success">Selesai</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>#TKT-99104</strong></td>
+                      <td>Peralatan Konstruksi Jaring Ganda</td>
+                      <td>15 Jul 2026</td>
+                      <td>Siti Aminah</td>
+                      <td><span class="badge badge-info">Pending</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            `;
+          } else if (subName === 'Stok Opname (SO)') {
+            detailHtml = `
+              <div class="table-view-panel">
+                <div class="section-heading">Catatan Stok Opname Fisik</div>
+                <table class="view-table">
+                  <thead>
+                    <tr>
+                      <th>Kode Item</th>
+                      <th>Deskripsi Produk</th>
+                      <th>Stok Buku (Sistem)</th>
+                      <th>Stok Aktual (Fisik)</th>
+                      <th>Selisih</th>
+                      <th>Kondisi Fisik</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>FEED-A01</strong></td>
+                      <td>Pakan Udang Starter (25kg/sak)</td>
+                      <td>120 Sak</td>
+                      <td>120 Sak</td>
+                      <td>0</td>
+                      <td>Baik & Kering</td>
+                    </tr>
+                    <tr>
+                      <td><strong>CHEM-CL01</strong></td>
+                      <td>Klorin Tablet 90% (50kg/drum)</td>
+                      <td>15 Drum</td>
+                      <td>14 Drum</td>
+                      <td><span style="color:#ef4444;font-weight:700;">-1</span></td>
+                      <td>1 Drum Bocor/Pecah</td>
+                    </tr>
+                    <tr>
+                      <td><strong>FUEL-SOLAR</strong></td>
+                      <td>Bahan Bakar Diesel Dexlite</td>
+                      <td>1,200 Liter</td>
+                      <td>1,195 Liter</td>
+                      <td><span style="color:#ef4444;font-weight:700;">-5 L</span></td>
+                      <td>Penyusutan Suhu</td>
+                    </tr>
+                    <tr>
+                      <td><strong>PROB-BAC</strong></td>
+                      <td>Probiotik Bacillus (20L/galon)</td>
+                      <td>40 Galon</td>
+                      <td>40 Galon</td>
+                      <td>0</td>
+                      <td>Segel Utuh</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            `;
+          } else if (subName === 'Laporan') {
+            const docs = [
+              { title: "Laporan Stock Opname Triwulan II.pdf", date: "30 Jun 2026", size: "1.9 MB" },
+              { title: "Laporan Gudang Keluar-Masuk Barang Bulanan.pdf", date: "28 Jun 2026", size: "1.4 MB" },
+              { title: "Rekap Audit Penggunaan Solar Semester I.pdf", date: "25 Jun 2026", size: "3.2 MB" }
+            ];
+            detailHtml = `
+              <div class="document-section">
+                <div class="section-heading">Berkas Laporan Inventaris Gudang</div>
+                <div class="document-grid">
+                  ${docs.map(doc => `
+                    <div class="document-card" onclick="alert('Simulasi: Membuka berkas PDF \\'${doc.title}\\'')">
+                      <div class="doc-icon-box">📄</div>
+                      <div class="doc-info">
+                        <h4 class="doc-title" title="${escapeHtml(doc.title)}">${escapeHtml(doc.title)}</h4>
+                        <span class="doc-meta">${doc.date} | ${doc.size}</span>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }
+        }
+        
+        viewContainer.innerHTML = `
+          <div class="module-view-header">
+            <div class="module-breadcrumb">
+              <span class="breadcrumb-parent">${escapeHtml(parentName)}</span>
+              <span class="breadcrumb-separator">/</span>
+              <span class="breadcrumb-current">${escapeHtml(subName)}</span>
+            </div>
+          </div>
+
+          <div class="module-view-body">
+            <div class="view-intro-card" style="margin-bottom: 24px;">
+              <div class="intro-icon-box">${introIcon}</div>
+              <div>
+                <h2 class="view-title">${escapeHtml(subName)}</h2>
+                <p class="view-desc">Detail data and berkas PDF untuk sub-modul ${escapeHtml(subName)} di bawah kelompok ${escapeHtml(parentName)}.</p>
+              </div>
+            </div>
+
+            ${detailHtml}
+          </div>
+        `;
+      }
+
+      // Collapsible Sidebar Modul Logic
+      let isModulPinned = false; try { isModulPinned = localStorage.getItem("isModulPinned") === "true"; } catch(e) {}
+      let isModulHovered = false;
+
+      function initSidebarModulCollapse() {
+        const sidebar = document.getElementById("sidebarModul");
+        const toggle = document.getElementById("sidebarModulToggle");
+        if (!sidebar || !toggle) return;
+        
+        // Hover listeners
+        sidebar.addEventListener("mouseenter", () => {
+          isModulHovered = true;
+          expandModulSidebar();
+        });
+        sidebar.addEventListener("mouseleave", () => {
+          isModulHovered = false;
+          checkAndCollapseModulSidebar();
+        });
+        
+        toggle.addEventListener("mouseenter", () => {
+          isModulHovered = true;
+          expandModulSidebar();
+        });
+        toggle.addEventListener("mouseleave", () => {
+          isModulHovered = false;
+          checkAndCollapseModulSidebar();
+        });
+
+        // Click listener on toggle triangle button
+        toggle.addEventListener("click", (e) => {
+          toggleSidebarModulManual();
+        });
+
+        // Set awal berdasarkan pin state yang tersimpan
+        if (isModulPinned) {
+          expandModulSidebar();
+        } else {
+          collapseModulSidebar();
+        }
+        updatePinButtonUI();
+      }
+
+      function expandModulSidebar() {
+        const layout = document.querySelector(".layout");
+        const sidebar = document.getElementById("sidebarModul");
+        const toggleIcon = document.getElementById("toggleTriangle");
+        if (!layout || !sidebar || !toggleIcon) return;
+        
+        layout.classList.add("modul-expanded");
+        sidebar.classList.remove("collapsed");
+        toggleIcon.textContent = "◀";
+      }
+
+      function collapseModulSidebar() {
+        const layout = document.querySelector(".layout");
+        const sidebar = document.getElementById("sidebarModul");
+        const toggleIcon = document.getElementById("toggleTriangle");
+        if (!layout || !sidebar || !toggleIcon) return;
+        
+        layout.classList.remove("modul-expanded");
+        sidebar.classList.add("collapsed");
+        toggleIcon.textContent = "▶";
+      }
+
+      function checkAndCollapseModulSidebar() {
+        setTimeout(() => {
+          if (!isModulPinned && !isModulHovered) {
+            collapseModulSidebar();
+          }
+        }, 200);
+      }
+
+      function togglePinSidebarModul(event) {
+        if (event) event.stopPropagation();
+        
+        isModulPinned = !isModulPinned;
+        localStorage.setItem("isModulPinned", isModulPinned);
+        
+        if (isModulPinned) {
+          expandModulSidebar();
+        } else {
+          if (!isModulHovered) {
+            collapseModulSidebar();
+          }
+        }
+        updatePinButtonUI();
+      }
+
+      function toggleSidebarModulManual() {
+        isModulPinned = !isModulPinned;
+        localStorage.setItem("isModulPinned", isModulPinned);
+        if (isModulPinned) {
+          expandModulSidebar();
+        } else {
+          collapseModulSidebar();
+        }
+        updatePinButtonUI();
+      }
+
+      function updatePinButtonUI() {
+        const pinBtn = document.getElementById("pinButton");
+        if (!pinBtn) return;
+        
+        if (isModulPinned) {
+          pinBtn.classList.add("pinned");
+          pinBtn.innerHTML = 
+            '<svg class="pin-icon" style="transform: scale(1.5); color: var(--sky);" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<line x1="12" y1="17" x2="12" y2="22"></line>' +
+              '<path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.58A2 2 0 0 1 15 9.18V5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4.18a2 2 0 0 1-.78 1.24l-2.78 3.58A2 2 0 0 0 5 15.24z"></path>' +
+            '</svg>' +
+            '<span class="pin-text" style="margin-left: 8px;">Pinned</span>';
+        } else {
+          pinBtn.classList.remove("pinned");
+          pinBtn.innerHTML = 
+            '<svg class="pin-icon" style="transform: scale(1.5); color: #64748b;" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<line x1="2" y1="2" x2="22" y2="22"></line>' +
+              '<line x1="12" y1="17" x2="12" y2="22"></line>' +
+              '<path d="M9 10.76a2 2 0 0 1-1.11 1.79 4 4 0 0 0-2.3 3.62C5.53 16.63 6 17 6.63 17h11.5c.2 0 .39-.05.56-.15"></path>' +
+              '<path d="M15 10V5a2 2 0 0 0-2-2H9.5a2 2 0 0 0-2 2v2.58"></path>' +
+            '</svg>' +
+            '<span class="pin-text" style="margin-left: 8px;">Pin</span>';
+        }
+      }
+
+      function toggleSidebarCluster(el, listId) {
+        const list = document.getElementById(listId);
+        if (!list) return;
+        
+        const isOpen = list.classList.contains('open');
+        
+        // Hapus active dari semua cluster terlebih dulu
+        document.querySelectorAll('#clusterMiniList .modul-item').forEach(item => item.classList.remove('active'));
+        
+        if (isOpen) {
+          list.classList.remove('open');
+          el.classList.remove('open');
+          // Jika cluster ditutup, hapus active-nya juga
+          el.classList.remove('active');
+        } else {
+          list.classList.add('open');
+          el.classList.add('open');
+          // Tandai cluster ini sebagai ACTIVE (beri aksen biru)
+          el.classList.add('active');
+        }
+      }
+
+      function selectCompanyFromSidebar(companyId) {
+        selectedCompanyId = companyId;
+        
+        // Sinkronisasi kelas active ke sidebar list perusahaan
+        document.querySelectorAll('.sidebar-comp-item').forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('data-id') === companyId) {
+            item.classList.add('active');
+            
+            // Pastikan cluster induknya juga tetap .active (aksen biru tetap tampil)
+            const parentList = item.closest('.submenu-container');
+            if (parentList) {
+              const parentClusterEl = parentList.previousElementSibling;
+              if (parentClusterEl && parentClusterEl.classList.contains('modul-item')) {
+                // Hapus active dari semua cluster dulu
+                document.querySelectorAll('#clusterMiniList .modul-item').forEach(c => c.classList.remove('active'));
+                // Set aktif hanya cluster induk dari PT yang dipilih
+                parentClusterEl.classList.add('active');
+                // Pastikan cluster terbuka
+                parentList.classList.add('open');
+                parentClusterEl.classList.add('open');
+              }
+            }
+          }
+        });
+        
+        // Kembali ke dashboard utama agar memperlihatkan panel metrik & detail perusahaan yang baru dipilih!
+        document.getElementById("dashboardRoot").hidden = false;
+        document.getElementById("moduleView").hidden = true;
+        
+        // Sembunyikan sidebar modul secara otomatis jika tidak sedang dipin
+        if (!isModulPinned) {
+          collapseModulSidebar();
+        }
+        
+        // Reset state aktif submenu modul agar konsisten
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+        
+        // Redraw content & middle list
+        renderClusters(dashboardData.clusters, dashboardData.companies);
+        renderSelectedCompany();
+      }
+
+      function updateLiveWeather(clusterName) {
+        const coords = {
+          "ntb": { lat: -8.65, lng: 116.32 },
+          "bali": { lat: -8.20, lng: 114.95 },
+          "jawa": { lat: -7.25, lng: 112.75 },
+          "madura": { lat: -7.01, lng: 113.86 },
+          "sulawesi": { lat: -1.25, lng: 122.50 }
+        };
+        
+        const key = String(clusterName || "").toLowerCase().trim();
+        const coord = coords[key] || coords["ntb"];
+        const weatherLoc = document.getElementById("weatherLocation");
+        if (weatherLoc) {
+          weatherLoc.textContent = "📍 " + clusterName;
+        }
+        
+        const url = "https://api.open-meteo.com/v1/forecast?latitude=" + coord.lat + "&longitude=" + coord.lng + "&current=temperature_2m,relative_humidity_2m,weather_code";
+        
+        fetch(url)
+          .then(res => res.json())
+          .then(data => {
+            const current = data.current;
+            if (current) {
+              const temp = Math.round(current.temperature_2m);
+              const hum = current.relative_humidity_2m;
+              const code = current.weather_code;
+              
+              let desc = "Cerah Berawan";
+              let icon = "⛅";
+              
+              if (code === 0) {
+                desc = "Cerah";
+                icon = "☀️";
+              } else if (code === 1 || code === 2) {
+                desc = "Cerah Berawan";
+                icon = "⛅";
+              } else if (code === 3) {
+                desc = "Berawan";
+                icon = "☁️";
+              } else if (code >= 45 && code <= 48) {
+                desc = "Berkabut";
+                icon = "🌫️";
+              } else if (code >= 51 && code <= 55) {
+                desc = "Gerimis";
+                icon = "🌦️";
+              } else if (code >= 61 && code <= 65) {
+                desc = "Hujan";
+                icon = "🌧️";
+              } else if (code >= 80 && code <= 82) {
+                desc = "Hujan Lebat";
+                icon = "🌧️";
+              } else if (code >= 95 && code <= 99) {
+                desc = "Hujan Badai";
+                icon = "⛈️";
+              }
+              
+              const weatherTemp = document.querySelector(".weather-temp");
+              const weatherDesc = document.querySelector(".weather-desc");
+              const weatherIcon = document.querySelector(".weather-icon");
+              const weatherDetails = document.querySelector(".weather-details");
+              
+              if (weatherTemp) weatherTemp.textContent = temp + "°C";
+              if (weatherDesc) weatherDesc.textContent = desc;
+              if (weatherIcon) weatherIcon.textContent = icon;
+              if (weatherDetails) {
+                weatherDetails.innerHTML = 
+                  '<span id="weatherLocation">📍 ' + escapeHtml(clusterName) + '</span>' +
+                  '<span>💧 Hum: ' + hum + '%</span>';
+              }
+            }
+          })
+          .catch(err => {
+            console.error("Error fetching live weather:", err);
+          });
+      }
+      // ────────────────────────────────────────────────────────────────────────
+    
+
+      // Intercept module clicks if no company selected
+      document.addEventListener('DOMContentLoaded', () => {
+        const modulList = document.querySelector('.modul-list');
+        if (modulList) {
+          modulList.addEventListener('click', (e) => {
+            if (!selectedCompanyId) {
+              e.stopPropagation();
+              e.preventDefault();
+              showToast('⚠️ Pilih Cluster dan PT terlebih dahulu sebelum membuka modul!', 'warning');
+            }
+          }, true); // Intercept di fase capture sebelum onclick jalan
+        }
+      });
+
+      // Intercept message from iframe for inner navigation without breaking out
+      window.addEventListener("message", function(event) {
+        if (event.data && event.data.type === "navigate") {
+          const iframe = document.querySelector('iframe[title="Web App View"]');
+          if (iframe) {
+            iframe.src = event.data.url;
+          }
+        }
+      });
+
+    </script>

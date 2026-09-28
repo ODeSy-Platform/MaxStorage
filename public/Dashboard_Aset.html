@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-width=1.0">
+  <title>Dashboard Manajemen Aset</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f6;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+      color: #555;
+    }
+    select, input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 16px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 12px 20px;
+      font-size: 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 10px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #hasilContainer {
+      margin-top: 30px;
+      display: none;
+    }
+    .asset-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 15px;
+      margin-bottom: 15px;
+      background-color: #fafafa;
+    }
+    .asset-img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+      margin-bottom: 10px;
+    }
+    .loading {
+      text-align: center;
+      color: #888;
+      font-style: italic;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🔍 Pencarian Aset</h1>
+    
+    <div class="form-group">
+      <label for="barcodeInput">Scan / Masukkan Barcode Aset:</label>
+      <input type="text" id="barcodeInput" placeholder="Contoh: AST-2409-001" autocomplete="off">
+    </div>
+    
+    <button onclick="cariAset()">Cari Aset</button>
+    <div class="loading" id="loadingText">Sedang mencari data ke VPS...</div>
+
+    <div id="hasilContainer">
+      <!-- Hasil pencarian akan muncul di sini -->
+    </div>
+  </div>
+
+  <script>
+    // --- SESUAIKAN DENGAN ALAMAT IP / DOMAIN VPS BAPAK/IBU ---
+    // Jangan lupa tambahkan port-nya jika tidak pakai domain (contoh: http://123.45.67.89:3005)
+    const VPS_API_URL = 'http://IP_VPS_ANDA:3005/api'; 
+
+    async function cariAset() {
+      const barcode = document.getElementById('barcodeInput').value.trim();
+      if (!barcode) {
+        alert("Silakan masukkan barcode terlebih dahulu!");
+        return;
+      }
+
+      const hasilContainer = document.getElementById('hasilContainer');
+      const loadingText = document.getElementById('loadingText');
+      
+      hasilContainer.style.display = 'none';
+      loadingText.style.display = 'block';
+
+      try {
+        const response = await fetch(`${VPS_API_URL}/aset/${barcode}`);
+        const result = await response.json();
+
+        loadingText.style.display = 'none';
+
+        if (result.success && result.data) {
+          tampilkanAset(result.data);
+        } else {
+          hasilContainer.style.display = 'block';
+          hasilContainer.innerHTML = `<p style="color:red; text-align:center;">${result.message || 'Data tidak ditemukan'}</p>`;
+        }
+      } catch (error) {
+        loadingText.style.display = 'none';
+        hasilContainer.style.display = 'block';
+        hasilContainer.innerHTML = `<p style="color:red; text-align:center;">Gagal terhubung ke VPS Server. Pastikan VPS berjalan dan IP sudah benar.</p>`;
+        console.error("Error fetching data:", error);
+      }
+    }
+
+    function tampilkanAset(asset) {
+      const hasilContainer = document.getElementById('hasilContainer');
+      
+      let html = `<div class="asset-card">
+                    <h3>${asset.nama}</h3>
+                    <p><strong>Barcode:</strong> ${asset.barcode}</p>
+                    <p><strong>Lokasi:</strong> ${asset.lokasi}</p>
+                    <p><strong>Kategori:</strong> ${asset.kategori}</p>
+                    <p><strong>Merek:</strong> ${asset.merek}</p>
+                    <p><strong>Kondisi:</strong> ${asset.kondisi}</p>
+                    <p><strong>Tanggal Beli:</strong> ${asset.tanggal}</p>`;
+      
+      if (asset.foto && asset.foto.includes('http')) {
+        html += `<img src="${asset.foto}" alt="Foto Aset" class="asset-img">`;
+      }
+      
+      html += `</div>`;
+      
+      hasilContainer.innerHTML = html;
+      hasilContainer.style.display = 'block';
+    }
+  </script>
+
+</body>
+</html>

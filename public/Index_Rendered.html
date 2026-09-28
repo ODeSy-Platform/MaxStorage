@@ -1,0 +1,3178 @@
+<!DOCTYPE html>
+<html>
+  <head>
+
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+    <base target="_top">
+    <meta charset="utf-8">
+    <title>ODeSy - Dashboard</title>
+    
+    <!-- Font Asli dari Desain Anda -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&family=Orbitron:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Memuat Stylesheet (CSS) -->
+    
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+<style>
+      /* Elegant Custom Scrollbar */
+      ::-webkit-scrollbar { width: 5px; height: 5px; }
+      ::-webkit-scrollbar-track { background: transparent; }
+      ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.4); border-radius: 4px; }
+      ::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.7); }
+
+      /* Specific Scrollbar for Cluster Sidebar (Gambar 1) - thinner */
+      .sidebar::-webkit-scrollbar { width: 8px; }
+      /* Specific Scrollbar for Modul Sidebar (Gambar 2) - wider/ideal */
+      .sidebar-modul::-webkit-scrollbar { width: 6px; }
+      
+
+
+
+      :root {
+        --bg: #eef4fc;
+        --surface: rgba(255, 255, 255, 0.96);
+        --text: #0d1b2e;
+        --muted: #4a6380;
+        --line: rgba(30, 78, 216, 0.12);
+        --shadow: 0 24px 60px rgba(6, 16, 46, 0.14);
+        --nav-start: #06101e;
+        --nav-end: #0e2040;
+        --blue: #1d4ed8;
+        --sky: #38bdf8;
+        --green: #16a34a;
+        --amber: #f59e0b;
+        --orange: #f97316;
+        --violet: #8b5cf6;
+        --slate: #475569;
+        --red: #dc2626;
+        --teal: #0f766e;
+      }
+      * { box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: "Plus Jakarta Sans", sans-serif;
+        color: var(--text);
+        min-width: 0;
+        background:
+          radial-gradient(circle at top left, rgba(29, 78, 216, 0.13), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(56, 189, 248, 0.10), transparent 24%),
+          var(--bg);
+      }
+      body.booting {
+        overflow: hidden;
+      }
+      .boot-screen {
+        position: fixed;
+        inset: 0;
+        z-index: 10000;
+        background: #000;
+        color: #fff;
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+        transition: opacity 1000ms ease, transform 1000ms ease;
+        transform-style: preserve-3d;
+      }
+      .boot-screen.hidden {
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(1.05);
+      }
+      .boot-canvas {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+        transition: opacity 800ms ease;
+      }
+      .boot-canvas.fade-out {
+        opacity: 0;
+      }
+      .boot-content {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transform-style: preserve-3d;
+      }
+      
+      /* 3D Cube Scene */
+      .cube-scene {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        perspective: 1000px;
+        transform-style: preserve-3d;
+        z-index: 3;
+        transition: opacity 800ms ease;
+      }
+      .cube-scene.fade-out {
+        opacity: 0;
+      }
+      .cube {
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        transform-style: preserve-3d;
+        animation: cube-spin 8s linear infinite;
+      }
+      .cube-1 {
+        left: 20%;
+        top: 25%;
+        animation-duration: 9s;
+      }
+      .cube-2 {
+        left: 70%;
+        top: 30%;
+        animation-duration: 11s;
+      }
+      .cube-3 {
+        left: 45%;
+        top: 65%;
+        animation-duration: 7s;
+      }
+      .cube-face {
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        border: 1px solid rgba(56, 189, 248, 0.4);
+        background-color: rgba(0, 8, 20, 0.6);
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        opacity: 0.85;
+      }
+      .cube-face.face-front { transform: translateZ(50px); }
+      .cube-face.face-back  { transform: rotateY(180deg) translateZ(50px); }
+      .cube-face.face-left  { transform: rotateY(-90deg) translateZ(50px); }
+      .cube-face.face-right { transform: rotateY(90deg) translateZ(50px); }
+      .cube-face.face-top   { transform: rotateX(90deg) translateZ(50px); }
+      .cube-face.face-bottom{ transform: rotateX(-90deg) translateZ(50px); }
+
+      @keyframes cube-spin {
+        0% { transform: rotateX(0deg) rotateY(0deg) translateY(0px); }
+        50% { transform: rotateX(180deg) rotateY(180deg) translateY(-20px); }
+        100% { transform: rotateX(360deg) rotateY(360deg) translateY(0px); }
+      }
+
+      /* Step 2 Text */
+      .boot-text-container {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        opacity: 0;
+        z-index: 4;
+        transition: opacity 800ms ease;
+      }
+      .boot-text-container.show {
+        opacity: 1;
+      }
+      .boot-text-img {
+        width: min(95vw, 1020px);
+        height: auto;
+        filter: drop-shadow(0 0 24px rgba(225, 29, 72, 0.4));
+      }
+
+      /* Step 3 Logo */
+      .boot-logo-container {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        opacity: 0;
+        z-index: 5;
+        transition: opacity 800ms ease;
+      }
+      .boot-logo-container.show {
+        opacity: 1;
+      }
+      .boot-logo-img {
+        width: min(60vw, 360px);
+        height: auto;
+        filter: drop-shadow(0 0 32px rgba(225, 29, 72, 0.6));
+      }
+      #zoomHost {
+        position: fixed;
+        inset: 0;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+      .layout { 
+        --sidebar-width: 250px;
+        display: grid; 
+        grid-template-columns: var(--sidebar-width) 4px auto 4px minmax(0, 1fr); 
+        height: 100vh; 
+        overflow: hidden; 
+        min-width: 1280px; 
+        width: 100%; 
+        position: relative; 
+      }
+      
+      .resizer {
+        width: 10px;
+        cursor: col-resize;
+        position: relative;
+        z-index: 10;
+        display: block;
+        touch-action: none;
+      }
+      .resizer::after {
+        content: "";
+        position: absolute;
+        width: 4px;
+        height: 100%;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        background: transparent;
+        transition: background 0.2s ease;
+      }
+      .resizer:hover::after, .resizer.dragging::after {
+        background: rgba(148, 163, 184, 0.8);
+      }
+
+      .sidebar {
+        min-height: 0;
+        background: linear-gradient(180deg, var(--nav-start), var(--nav-end));
+        color: #eef6ff;
+        padding: 28px 18px;
+        display: grid;
+        align-content: start;
+        gap: 18px;
+        position: sticky;
+        top: 0;
+        height: 100%;
+        overflow-y: auto;
+      }
+      
+      .main::-webkit-scrollbar { width: 26px; }
+      .main::-webkit-scrollbar-track { background: #f1f5f9; }
+      .main::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 12px; border: 6px solid #f1f5f9; }
+      .main::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+      .brand { 
+        display: grid; 
+        gap: 10px; 
+        justify-items: center; 
+        text-align: center;
+        margin-left: -14px;
+        margin-right: -14px;
+      }
+      .brand h1, .hero h2, .section-title, .metric-value, .cluster-card h3, .detail-company h3 {
+        font-family: "Manrope", sans-serif;
+      }
+      .brand p, .sidebar small { margin: 4px 0 0; color: rgba(226, 232, 240, 0.7); font-size: 0.95rem; }
+      .brand-logo {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+      }
+      .brand-logo-image {
+        width: 90%; max-width: 220px;
+        display: block;
+        margin: 0;
+        height: auto;
+        filter: drop-shadow(0 4px 18px rgba(56, 189, 248, 0.22));
+      }
+      .logo-card {
+        display: none;
+      }
+      .logo-fallback,
+      .brand-logo .logo-mark,
+      .brand-logo .logo-word,
+      .brand-logo .logo-tagline {
+        display: none;
+      }
+      .sidebar-chip {
+        border-radius: 16px; padding: 14px 16px;
+        background: linear-gradient(135deg, rgba(29, 78, 216, 0.97), rgba(56, 189, 248, 0.80));
+        box-shadow: 0 14px 28px rgba(6, 16, 62, 0.40); font-weight: 700;
+        border: 1px solid rgba(56, 189, 248, 0.20);
+        font-size: 1.15rem;
+      }
+      .nav-list, .cluster-mini-list, .tip-list, .status-list, .activity-list, .monthly-list, .quick-grid { display: grid; gap: 10px; }
+      .nav-item, .cluster-mini, .tip-item {
+        padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+      .nav-item strong, .cluster-mini strong, .tip-item strong { display: block; font-size: 1.15rem; }
+      .nav-item small, .cluster-mini small, .tip-item small { color: rgba(226, 232, 240, 0.65); font-size: 0.95rem; margin-top: 4px; display: block; }
+      .main { padding: 28px; height: 100%; overflow-y: auto; display: flex; flex-direction: column; }
+      .top-row { display: flex; justify-content: space-between; gap: 24px; align-items: center; margin-bottom: 22px; width: 100%; }
+      .top-meta { display: flex; align-items: center; gap: 14px; }
+      .meta-box, .search-box, .metric-card, .panel, .cluster-card, .company-pill, .status-item, .activity-item, .monthly-item, .notice, .top-search, .notif-btn, .profile-card, .date-card, .access-btn, .login-modal-card, .login-select {
+        background: var(--surface); border: 1px solid rgba(255, 255, 255, 0.78); box-shadow: var(--shadow); backdrop-filter: blur(12px);
+      }
+      .meta-box, .search-box { padding: 12px 14px; border-radius: 16px; color: var(--muted); }
+      .search-box { min-width: 320px; }
+      .top-search {
+        min-width: 300px;
+        padding: 12px 16px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        color: var(--muted);
+      }
+      .top-search span:last-child { color: var(--blue); font-size: 1rem; }
+      .logo-card {
+        min-width: 240px;
+        padding: 10px 14px;
+        border-radius: 20px;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        backdrop-filter: none;
+      }
+      .logo-lockup {
+        display: grid;
+        justify-items: center;
+        line-height: 1;
+      }
+      .logo-image {
+        width: 220px;
+        height: auto;
+        display: block;
+      }
+      .logo-mark {
+        width: 168px;
+        height: 52px;
+        margin-bottom: 6px;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 280 90'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23ff4a23'/%3E%3Cstop offset='0.55' stop-color='%23ca1b23'/%3E%3Cstop offset='1' stop-color='%237d1320'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath fill='url(%23g)' d='M8 76 C26 64 28 42 34 20 C37 10 43 6 54 6 H86 C95 6 100 11 104 20 L133 76 C122 84 103 84 93 76 L72 33 C70 30 66 30 64 33 L43 76 C33 84 17 84 8 76 Z'/%3E%3Cpath fill='url(%23g)' d='M147 76 C165 64 167 42 173 20 C176 10 182 6 193 6 H225 C234 6 239 11 243 20 L272 76 C261 84 242 84 232 76 L211 33 C209 30 205 30 203 33 L182 76 C172 84 156 84 147 76 Z'/%3E%3C/svg%3E");
+      }
+      .logo-word {
+        font-family: "Orbitron", "Manrope", sans-serif;
+        font-weight: 800;
+        font-size: 1.88rem;
+        letter-spacing: 0.11em;
+        color: #9f1820;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
+      .logo-tagline {
+        font-size: 0.82rem;
+        letter-spacing: 0.01em;
+        color: #c61d27;
+        text-shadow: 0 1px 0 rgba(255, 255, 255, 0.18);
+      }
+      .notif-btn {
+        position: relative;
+        width: 48px;
+        height: 48px;
+        border-radius: 16px;
+        display: grid;
+        place-items: center;
+        font-size: 1.15rem;
+        color: var(--slate);
+      }
+      .notif-count {
+        position: absolute;
+        top: -4px;
+        right: -2px;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: #ef4444;
+        color: #fff;
+        font-size: 0.72rem;
+        font-weight: 800;
+        display: grid;
+        place-items: center;
+      }
+      .profile-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border-radius: 18px;
+        min-width: 220px;
+      }
+      .avatar {
+        width: 42px;
+        height: 42px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #2563eb, #38bdf8);
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-size: 1.05rem;
+        font-weight: 800;
+        flex: 0 0 auto;
+      }
+      .profile-card strong,
+      .date-card strong,
+      .access-btn strong { display: block; font-size: 1.08rem; }
+      .profile-card small,
+      .date-card small,
+      .access-btn small { color: var(--muted); font-size: 0.92rem; margin-top: 2px; }
+      .date-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 14px;
+        border-radius: 18px;
+      }
+      .date-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+        background: rgba(37, 99, 235, 0.1);
+        color: var(--blue);
+        display: grid;
+        place-items: center;
+        font-size: 1.2rem;
+      }
+      .access-btn {
+        padding: 10px 14px;
+        border-radius: 18px;
+        cursor: pointer;
+        min-width: 170px;
+      }
+      .login-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 26, 49, 0.34);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        z-index: 40;
+      }
+      .login-overlay.open { display: flex; }
+      .login-modal-card {
+        width: min(520px, 100%);
+        border-radius: 28px;
+        padding: 22px;
+      }
+      .login-grid {
+        display: grid;
+        gap: 14px;
+        margin-top: 18px;
+      }
+      .login-select {
+        width: 100%;
+        border-radius: 16px;
+        padding: 13px 14px;
+        color: var(--text);
+      }
+      .login-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        margin-top: 18px;
+      }
+      .action-btn {
+        border: 0;
+        border-radius: 16px;
+        padding: 12px 16px;
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .action-btn.primary { background: linear-gradient(135deg, #2563eb, #38bdf8); color: #fff; }
+      .action-btn.ghost { background: rgba(148, 163, 184, 0.12); color: var(--text); }
+      .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+      .metric-card { padding: 18px; border-radius: 22px; display: grid; gap: 10px; }
+      .metric-label { margin: 0; color: var(--muted); font-size: 0.98rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+      .metric-value { margin: 0; font-size: 2.6rem; }
+      .metric-detail { margin: 0; color: var(--muted); font-size: 1.05rem; }
+      .content-grid { display: grid; grid-template-columns: 1.15fr 1.45fr; gap: 20px; }
+      .panel { border-radius: 28px; padding: 20px; }
+      .panel-header { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; margin-bottom: 18px; }
+      .section-title { margin: 0; font-size: 1.28rem; }
+      .section-subtitle { margin: 4px 0 0; color: var(--muted); font-size: 1.08rem; }
+      .panel-link { color: var(--blue); font-weight: 700; font-size: 1.05rem; }
+      .cluster-grid { display: grid; gap: 16px; }
+      .cluster-card { border-radius: 24px; padding: 18px; }
+      .cluster-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+      .cluster-card h3 { margin: 0; font-size: 1.36rem; }
+      .cluster-card p { margin: 6px 0 0; color: var(--muted); font-size: 1.08rem; }
+      .badge { padding: 6px 10px; border-radius: 999px; font-size: 0.88rem; font-weight: 800; }
+      .badge.active { background: rgba(22, 163, 74, 0.14); color: var(--green); }
+      .badge.setup { background: rgba(249, 115, 22, 0.14); color: var(--orange); }
+      .cluster-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+      .stat-box { padding: 12px; border-radius: 18px; background: rgba(248, 250, 252, 0.9); border: 1px solid var(--line); }
+      .stat-box strong { display: block; font-size: 1.28rem; }
+      .stat-box small { color: var(--muted); font-size: 0.95rem; }
+      .company-list { display: grid; gap: 10px; }
+      .company-pill {
+        width: 100%; border-radius: 18px; padding: 14px 16px; text-align: left; cursor: pointer;
+        transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+      }
+      .company-pill:hover, .company-pill.active { transform: translateY(-1px); border-color: rgba(37, 99, 235, 0.25); box-shadow: 0 16px 30px rgba(37, 99, 235, 0.12); }
+      .company-pill-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+      .company-pill strong { display: block; font-size: 1.12rem; }
+      .company-pill small { display: block; color: var(--muted); margin-top: 4px; font-size: 0.95rem; }
+      .company-meta { margin-top: 12px; display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 0.98rem; }
+      .detail-shell { display: grid; gap: 18px; }
+      .detail-hero { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 18px; }
+      .detail-card {
+        border-radius: 26px; padding: 20px; background: linear-gradient(135deg, rgba(8, 26, 49, 0.96), rgba(18, 51, 91, 0.92));
+        color: #eff6ff; box-shadow: 0 24px 60px rgba(8, 26, 49, 0.24);
+      }
+      .detail-company { display: flex; justify-content: space-between; gap: 12px; }
+      .detail-company h3 { margin: 0; font-size: 1.78rem; }
+      .detail-company p, .detail-card small { color: rgba(226, 232, 240, 0.72); font-size: 1.05rem; }
+      .detail-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+      .detail-metric { padding: 14px; border-radius: 18px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.95rem; }
+      .detail-metric strong { display: block; font-size: 1.72rem; margin-top: 6px; }
+      .quick-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .quick-card { padding: 16px; border-radius: 20px; text-align: center; background: var(--surface); border: 1px solid var(--line); }
+      .quick-card strong { display: block; font-size: 1.05rem; }
+      .quick-card small { color: var(--muted); font-size: 0.88rem; }
+      .quick-icon { width: 52px; height: 52px; margin: 0 auto 10px; border-radius: 16px; display: grid; place-items: center; color: #fff; font-size: 1.2rem; }
+      .chart-wrap { height: 280px; }
+      #companyChart { width: 100%; height: 100%; }
+      .status-item, .activity-item, .monthly-item, .notice { border-radius: 18px; padding: 14px 16px; border: 1px solid var(--line); }
+      .status-row, .monthly-row { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+      .status-item strong, .activity-item strong, .monthly-item strong, .notice strong { display: block; font-size: 1.05rem; }
+      .status-item small, .activity-item small, .monthly-item small, .notice small { color: var(--muted); font-size: 0.95rem; margin-top: 2px; }
+      .progress { width: 100%; height: 8px; border-radius: 999px; background: rgba(148, 163, 184, 0.18); overflow: hidden; margin-top: 10px; }
+      .progress > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #1d4ed8, #38bdf8); }
+      .tone-blue { background: linear-gradient(135deg, #1d4ed8, #38bdf8); }
+      .tone-green { background: linear-gradient(135deg, #16a34a, #4ade80); }
+      .tone-amber { background: linear-gradient(135deg, #f59e0b, #fb923c); }
+      .tone-violet { background: linear-gradient(135deg, #8b5cf6, #a78bfa); }
+      .tone-teal { background: linear-gradient(135deg, #0f766e, #2dd4bf); }
+      .tone-slate { background: linear-gradient(135deg, #475569, #94a3b8); }
+      .loading, .error-box { padding: 22px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+      .error-box { color: var(--red); }
+      
+      /* Lock Module Panel */
+      .sidebar-modul.locked {
+        opacity: 0.5;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+      .sidebar-modul {
+
+        background: linear-gradient(180deg, var(--nav-start), var(--nav-end));
+        color: #eef6ff;
+        padding: 28px 18px;
+        display: grid;
+        align-content: start;
+        gap: 16px;
+        border-left: 1px solid rgba(255, 255, 255, 0.06);
+        height: 100%;
+        overflow-y: auto;
+        width: var(--sidebar-modul-width, 240px);
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease, margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        flex-shrink: 0;
+        margin-left: 12px;
+      }
+      .sidebar-modul.collapsed {
+        width: 0 !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        opacity: 0;
+        pointer-events: none;
+        border-left: none;
+        margin-left: 0 !important;
+      }
+      .sidebar-modul-toggle {
+        position: absolute;
+        left: calc(var(--sidebar-width) + 4px);
+        top: 50%;
+        transform: translateY(-50%);
+        width: 20px;
+        height: 54px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-left: none;
+        border-radius: 0 10px 10px 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text);
+        font-size: 0.78rem;
+        z-index: 100;
+        box-shadow: 4px 0 10px rgba(6, 16, 62, 0.12);
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.2s;
+        padding: 0;
+        outline: none;
+      }
+      .sidebar-modul-toggle:hover {
+        background: var(--line);
+        color: var(--sky);
+      }
+      .layout.modul-expanded .sidebar-modul-toggle {
+        left: calc(var(--sidebar-width) + 4px + 12px + var(--sidebar-modul-width, 240px)); /* 296px sidebar/resizer + 12px margin + 240px width */
+      }
+      .sidebar-modul-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
+        padding-left: 8px;
+        min-width: 204px;
+        padding-right: 24px;
+      }
+      .pin-btn {
+        background: transparent;
+        border: none;
+        color: rgba(226, 232, 240, 0.35);
+        cursor: pointer;
+        font-size: 0.82rem;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: all 0.2s ease;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-family: inherit;
+      }
+      .pin-btn:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .pin-btn.pinned {
+        color: var(--sky);
+        background: rgba(56, 189, 248, 0.12);
+        font-weight: 700;
+      }
+                  .modul-title {
+        margin: 20px 0 10px;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: rgba(226, 232, 240, 0.45);
+        font-weight: 600;
+        padding-left: 6px;
+      }
+      #moduleView {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        gap: 24px;
+        animation: fadeIn 0.35s ease;
+      }
+      .modul-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .modul-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: rgba(238, 246, 255, 0.85);
+      }
+      .modul-item:hover {
+        background: rgba(255, 255, 255, 0.04);
+        color: #fff;
+      }
+      .modul-item.active {
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        font-weight: 600;
+      }
+      .modul-icon {
+        font-size: 1.1rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+      }
+      .modul-text {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      /* Submenu Accordion & Sub-view Styles */
+      .submenu-arrow {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        transition: transform 0.2s ease;
+        color: rgba(226, 232, 240, 0.4);
+        margin-right: 0px;
+      }
+      .modul-item.open .submenu-arrow {
+        transform: rotate(180deg);
+        color: var(--sky);
+      }
+      .submenu-container {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-top: 2px;
+        margin-bottom: 4px;
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 0.3s ease;
+      }
+      .submenu-container.open {
+        max-height: 2500px; }
+      
+      /* Level 2: Category */
+      .modul-category-group {
+        display: flex;
+        flex-direction: column;
+      }
+      .submenu-category {
+        display: flex;
+        align-items: center;
+        padding: 8px 14px 8px 46px; /* Indent under parent text */
+        color: rgba(238, 246, 255, 0.7);
+        font-size: 0.85rem;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background 0.15s ease;
+        font-weight: 500;
+        gap: 10px;
+      }
+      .cat-icon {
+        display: flex;
+        align-items: center;
+        opacity: 0.6;
+      }
+      .submenu-category:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .category-arrow {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        transition: transform 0.2s ease;
+        color: rgba(226, 232, 240, 0.35);
+      }
+      .submenu-category.open .category-arrow {
+        transform: rotate(180deg);
+        color: var(--sky);
+      }
+      .category-text {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      /* Level 3: Sub-category Container */
+      .sub-category-container {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 0.25s ease;
+      }
+      .sub-category-container.open {
+        max-height: 500px;
+      }
+
+      /* Level 3: Submenu Item */
+      .submenu-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 14px 8px 70px; /* Indent deeper */
+        font-size: 0.8rem;
+        color: rgba(238, 246, 255, 0.6);
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background 0.15s ease;
+        gap: 10px;
+      }
+      .item-icon {
+        display: flex;
+        align-items: center;
+        opacity: 0.5;
+      }
+      .item-text {
+        flex: 1;
+        white-space: normal; /* allow wrap if too long */
+        line-height: 1.3;
+      }
+      .submenu-item:hover {
+        background: rgba(255, 255, 255, 0.04);
+        color: #fff;
+      }
+      .submenu-item.active {
+        color: var(--sky);
+        font-weight: 600;
+        background: rgba(56, 189, 248, 0.08);
+      }
+      .submenu-item.active .item-icon {
+        opacity: 1;
+      }
+
+      .sidebar-comp-item {
+        padding-left: 42px !important;
+      }
+        border-bottom: 1px solid var(--line);
+        padding-bottom: 16px;
+      }
+      .module-breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.95rem;
+      }
+      .breadcrumb-parent {
+        color: var(--muted);
+      }
+      .breadcrumb-separator {
+        color: var(--line);
+      }
+      .breadcrumb-current {
+        font-weight: 700;
+        color: var(--text);
+      }
+      .back-to-dashboard-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        color: var(--text);
+        padding: 8px 16px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+      }
+      .back-to-dashboard-btn:hover {
+        background: var(--line);
+        transform: translateY(-2px);
+      }
+      .view-intro-card {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+      }
+      .intro-icon-box {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        background: rgba(56, 189, 248, 0.1);
+        display: grid;
+        place-items: center;
+        font-size: 2rem;
+      }
+      .view-title {
+        margin: 0 0 6px 0;
+        font-size: 1.45rem;
+        font-weight: 800;
+      }
+      .view-desc {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+      
+      /* Document Cards & Grid */
+      .document-section {
+        display: grid;
+        gap: 16px;
+      }
+      .section-heading {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .document-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+        gap: 16px;
+      }
+      .document-card {
+        display: flex;
+        gap: 16px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: var(--shadow);
+        transition: all 0.2s ease;
+        cursor: pointer;
+      }
+      .document-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(56, 189, 248, 0.35);
+        box-shadow: 0 10px 20px rgba(6, 16, 62, 0.08);
+      }
+      .doc-icon-box {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        background: rgba(239, 68, 68, 0.1);
+        display: grid;
+        place-items: center;
+        font-size: 1.8rem;
+        color: #ef4444;
+        flex-shrink: 0;
+      }
+      .doc-info {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-width: 0;
+      }
+      .doc-title {
+        margin: 0 0 4px 0;
+        font-weight: 700;
+        font-size: 0.92rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: var(--text);
+      }
+      .doc-meta {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      
+      /* Table Layouts */
+      .table-view-panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        padding: 24px;
+        box-shadow: var(--shadow);
+      }
+      .view-table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+        margin-top: 16px;
+      }
+      .view-table th {
+        padding: 12px 16px;
+        color: var(--muted);
+        font-weight: 700;
+        font-size: 0.82rem;
+        text-transform: uppercase;
+        border-bottom: 2px solid var(--line);
+      }
+      .view-table td {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--line);
+        font-size: 0.92rem;
+      }
+      .view-table tr:last-child td {
+        border-bottom: none;
+      }
+      
+      /* Status Badges */
+      .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 700;
+      }
+      .badge-success { background: rgba(22, 163, 74, 0.12); color: #16a34a; }
+      .badge-warning { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+      .badge-info { background: rgba(56, 189, 248, 0.12); color: #0284c7; }
+
+      /* Weather Widget Styles */
+      .weather-widget {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 8px 14px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(12px);
+      }
+      .weather-main {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-right: 1px solid var(--line);
+        padding-right: 10px;
+      }
+      .weather-icon {
+        font-size: 1.4rem;
+      }
+      .weather-temp {
+        font-weight: 800;
+        font-size: 1.1rem;
+        display: block;
+        color: var(--text);
+        line-height: 1.2;
+      }
+      .weather-desc {
+        font-size: 0.75rem;
+        color: var(--muted);
+        display: block;
+        line-height: 1;
+      }
+      .weather-details {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 0.75rem;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+      
+      /* Sidebar Cluster Accordion Styles */
+      .sidebar-cluster-group {
+        display: grid;
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+      .sidebar-cluster-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .sidebar-cluster-item:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .sidebar-cluster-item.open {
+        border-color: rgba(56, 189, 248, 0.3);
+        background: rgba(56, 189, 248, 0.04);
+      }
+      .sidebar-cluster-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .sidebar-cluster-top strong {
+        font-size: 1.12rem;
+        color: #fff;
+      }
+      .cluster-arrow {
+        font-size: 0.65rem;
+        transition: transform 0.22s ease;
+        color: rgba(226, 232, 240, 0.35);
+      }
+      .sidebar-cluster-item.open .cluster-arrow {
+        transform: rotate(180deg);
+        color: var(--sky);
+      }
+      .sidebar-cluster-item small {
+        display: block;
+        margin-top: 4px;
+        color: rgba(226, 232, 240, 0.65);
+        font-size: 0.95rem;
+      }
+      
+      .sidebar-company-list {
+        display: grid;
+        gap: 2px;
+        padding-left: 14px;
+        border-left: 2px solid rgba(56, 189, 248, 0.12);
+        margin-left: 20px;
+        overflow: hidden;
+        max-height: 0;
+        transition: max-height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .sidebar-company-list.open {
+        max-height: 250px;
+        margin-top: 4px;
+        margin-bottom: 8px;
+      }
+      .sidebar-company-item {
+        padding: 8px 12px;
+        font-size: 0.98rem;
+        color: rgba(238, 246, 255, 0.65);
+        cursor: pointer;
+        border-radius: 8px;
+        transition: all 0.15s ease;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .sidebar-company-item:hover {
+        background: rgba(255, 255, 255, 0.04);
+        color: #fff;
+        padding-left: 16px;
+      }
+      .sidebar-company-item.active {
+        color: var(--sky);
+        font-weight: 700;
+        background: rgba(56, 189, 248, 0.08);
+      }
+
+      /* Force hidden override untuk element dengan display: grid/flex */
+      #moduleView[hidden], #dashboardRoot[hidden] {
+        display: none !important;
+      }
+
+      
+      
+
+      /* Media queries dinonaktifkan agar tampilan di HP sama persis dengan laptop (Desktop view) */
+    
+
+      
+      
+      
+      
+      /* Elegance Enhancements Final */
+      .modul-item, .submenu-category, .submenu-item, .sidebar-cluster-item, .sidebar-comp-item {
+        position: relative;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease, color 0.15s ease;
+        box-shadow: none !important; /* Ensure no inset shadow overrides */
+      }
+      .modul-item:hover, .submenu-category:hover, .submenu-item:hover, .sidebar-cluster-item:hover, .sidebar-comp-item:hover {
+        transform: translateX(4px);
+      }
+      
+      .modul-item::before, .submenu-category::before, .submenu-item::before, .sidebar-cluster-item::before, .sidebar-comp-item::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        height: 60%;
+        width: 3px;
+        background-color: #38bdf8;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        z-index: 20;
+        border-radius: 0; /* Biasa saja, lurus tidak melengkung */
+        pointer-events: none;
+      }
+      
+      /* Target the active state and hover state */
+      .modul-item.active::before,
+      .modul-item.active-parent::before,
+      .submenu-category.active::before,
+      .submenu-category.active-parent::before,
+      .submenu-item.active::before, 
+      .sidebar-cluster-item.active::before,
+      .sidebar-cluster-item.active-parent::before,
+      .sidebar-comp-item.active::before,
+      .modul-item:hover::before,
+      .submenu-category:hover::before,
+      .submenu-item:hover::before,
+      .sidebar-cluster-item:hover::before,
+      .sidebar-comp-item:hover::before {
+        opacity: 1;
+      }
+
+      /* Global Resizing Fix */
+      body.is-resizing, body.is-resizing * {
+        transition: none !important;
+      }
+</style>
+
+
+
+  </head>
+  <body class="booting">
+    
+    <!-- Komponen Layar Booting 3D -->
+    
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+    <div id="bootScreen" class="boot-screen" aria-label="Boot splash screen">
+      <div class="boot-content">
+        <div id="bootLogoContainer" class="boot-logo-container">
+          <img id="bootLogoImg" class="boot-logo-img" alt="MAXMAR logo">
+        </div>
+      </div>
+    </div>
+
+    
+    <!-- Komponen Halaman Dashboard -->
+    
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+    <div id="zoomHost">
+    <div class="layout" id="dashboardLayout">
+      <aside class="sidebar" id="sidebar">
+        <div class="brand" onclick="showDashboardMain()" style="cursor: pointer;" title="Kembali ke Dashboard Utama">
+          <div class="brand-logo" aria-label="MAXMAR logo kiri atas">
+            <img id="brandLogo" alt="MAXMAR logo" class="brand-logo-image">
+          </div>
+
+        </div>
+
+        <div>
+          <small>Ringkasan Cluster</small>
+          <div id="clusterMiniList" class="cluster-mini-list" style="margin-top:10px;"></div>
+        </div>
+      </aside>
+
+      <div class="resizer" id="resizer"></div>
+
+      <button id="sidebarModulToggle" class="sidebar-modul-toggle" title="Tampilkan / Sembunyikan Modul">
+        <span id="toggleTriangle">▶</span>
+      </button>
+
+      <aside class="sidebar-modul collapsed" id="sidebarModul">
+        <div class="sidebar-modul-header">
+          <span class="modul-title">• MODUL</span>
+          <button id="pinButton" class="pin-btn" onclick="togglePinSidebarModul(event)" title="Sematkan / Pin Sidebar">
+            📌 <span class="pin-text">Pin</span>
+          </button>
+        </div>
+        <div class="modul-list">
+          <div class="modul-item active" onclick="selectModul(this, 'Gudang')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Gudang</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Aset')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Aset</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Logbook')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Logbook</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Pakan')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Pakan</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Saprotam')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Saprotam</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'BBM')">
+            <span class="modul-icon">?</span>
+            <span class="modul-text">BBM</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'HM/KM')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">HM/KM</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Laporan PKKPRL')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Laporan PKKPRL</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Laporan UKL-UPL')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Laporan UKL-UPL</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Laporan LKPM')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Laporan LKPM</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Lokasi')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Lokasi</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Struktur Organisasi')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Struktur Organisasi</span>
+          </div>
+          <div class="modul-item" onclick="selectModul(this, 'Aksesbilitas')">
+            <span class="modul-icon">??</span>
+            <span class="modul-text">Aksesbilitas</span>
+          </div>
+        </div>
+      </aside>
+
+      <div class="resizer" id="resizer-modul"></div>
+
+      <main class="main" id="mainContent">
+        <div class="top-row">
+          <div class="top-search">
+            <span>Cari menu, data, laporan...</span>
+            <span>⌕</span>
+          </div>
+          <div class="top-meta">
+            <!-- Weather Widget -->
+            <div class="weather-widget">
+              <div class="weather-main">
+                <span class="weather-icon">⛅</span>
+                <div>
+                  <span class="weather-temp">30°C</span>
+                  <span class="weather-desc">Cerah Berawan</span>
+                </div>
+              </div>
+              <div class="weather-details">
+                <span id="weatherLocation">📍 NTB</span>
+                <span>💧 Hum: 76%</span>
+              </div>
+            </div>
+            <div id="dateCard" class="date-card"></div>
+            <div class="notif-btn">
+              🔔
+              <span id="notifCount" class="notif-count">0</span>
+            </div>
+            <div id="profileCard" class="profile-card"></div>
+          </div>
+        </div>
+
+        <div id="loadingState" class="loading">Memuat dashboard...</div>
+        <div id="errorState" class="error-box" hidden></div>
+
+        <div id="moduleView" hidden></div>
+
+        <div id="dashboardRoot" hidden>
+          <section id="metricCards" class="metrics"></section>
+
+          <section class="content-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <h3 class="section-title">Cluster Perusahaan</h3>
+                  <p class="section-subtitle">Halaman depan dibuat per cluster. Perusahaan menjadi pintu masuk ke tampilan detail.</p>
+                </div>
+                <span class="panel-link">Cluster View</span>
+              </div>
+              <div id="clusterGrid" class="cluster-grid"></div>
+            </div>
+
+            <div class="detail-shell">
+              <div class="detail-hero">
+                <div class="detail-card">
+                  <div id="detailCompany" class="detail-company"></div>
+                  <div id="detailMetrics" class="detail-metrics"></div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h3 class="section-title">Quick Menu</h3>
+                      <p class="section-subtitle">Modul operasional untuk perusahaan terpilih</p>
+                    </div>
+                    <span class="panel-link">Detail View</span>
+                  </div>
+                  <div id="quickGrid" class="quick-grid"></div>
+                </div>
+              </div>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <div>
+                    <h3 class="section-title">Grafik Aktivitas Perusahaan</h3>
+                    <p class="section-subtitle">Panel visual utama seperti contoh dashboard kedua</p>
+                  </div>
+                  <span id="detailProgress" class="panel-link"></span>
+                </div>
+                <div class="chart-wrap">
+                  <canvas id="companyChart" width="780" height="280"></canvas>
+                </div>
+              </div>
+
+              <div class="content-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h3 class="section-title">Status Seluruh Lokasi</h3>
+                      <p class="section-subtitle">Ringkasan status untuk perusahaan yang dipilih</p>
+                    </div>
+                    <span class="panel-link">Live</span>
+                  </div>
+                  <div id="statusList" class="status-list"></div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h3 class="section-title">Aktivitas Terbaru</h3>
+                      <p class="section-subtitle">Notifikasi kegiatan operasional terakhir</p>
+                    </div>
+                    <span class="panel-link">Realtime</span>
+                  </div>
+                  <div id="activityList" class="activity-list"></div>
+                </div>
+              </div>
+
+              <div class="content-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h3 class="section-title">Ringkasan Bulan Ini</h3>
+                      <p class="section-subtitle">KPI sederhana untuk perusahaan aktif</p>
+                    </div>
+                    <span class="panel-link">Summary</span>
+                  </div>
+                  <div id="monthlyList" class="monthly-list"></div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-header">
+                    <div>
+                      <h3 class="section-title">Notifikasi Setup</h3>
+                      <p class="section-subtitle">Panduan implementasi dan pemisahan project</p>
+                    </div>
+                    <span class="panel-link">Action</span>
+                  </div>
+                  <div id="noticeList" class="activity-list"></div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div><!-- /#dashboardLayout -->
+    </div><!-- /#zoomHost -->
+
+    <div id="loginOverlay" class="login-overlay">
+      <div class="login-modal-card">
+        <h3 class="section-title">Akses Dashboard</h3>
+        <p class="section-subtitle">Login per perusahaan akan membatasi data hanya ke perusahaan tersebut. Super admin bisa melihat semua cluster.</p>
+        <div class="login-grid">
+          <label>
+            <small>Pilih akses</small>
+            <select id="accessSelect" class="login-select"></select>
+          </label>
+        </div>
+        <div class="login-actions">
+          <button id="closeAccessModal" type="button" class="action-btn ghost">Tutup</button>
+          <button id="applyAccessButton" type="button" class="action-btn primary">Gunakan Akses</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Memuat Javascript Client-Side -->
+    
+<script>
+(function() {
+  window.google = window.google || {};
+  window.google.script = window.google.script || {};
+  
+  function createRunner(successHandler, failureHandler) {
+    return new Proxy({}, {
+      get: function(target, prop) {
+        if (prop === 'withSuccessHandler') {
+          return function(fn) { return createRunner(fn, failureHandler); };
+        }
+        if (prop === 'withFailureHandler') {
+          return function(fn) { return createRunner(successHandler, fn); };
+        }
+        return function(...args) {
+          fetch('/api/' + prop, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ args: args })
+          })
+          .then(r => r.json())
+          .then(res => {
+            if (res.ok && successHandler) successHandler(res.data);
+            else if (!res.ok && failureHandler) failureHandler(res.error || new Error('API Error'));
+          })
+          .catch(e => {
+            if (failureHandler) failureHandler(e);
+            else console.error('API Error:', e);
+          });
+        };
+      }
+    });
+  }
+  
+  window.google.script.run = createRunner(null, null);
+})();
+</script>
+
+<script>
+
+      const toneMap = { blue: "tone-blue", green: "tone-green", amber: "tone-amber", violet: "tone-violet", teal: "tone-teal", slate: "tone-slate" };
+      const iconMap = { feed: "🐟", pond: "📍", solar: "⛽", permit: "📄", waste: "♻️", gear: "⚙️" };
+      let MAXMAR_LOGO_SRC = "";
+      let dashboardData = null;
+      let selectedCompanyId = "";
+      let currentAccessId = "";
+      function hydrateLogoImages() {
+        if (!MAXMAR_LOGO_SRC) return;
+        const bootLogo = document.getElementById("bootLogo");
+        const brandLogo = document.getElementById("brandLogo");
+        const topLogo = document.getElementById("topLogo");
+        const bootLogoImg = document.getElementById("bootLogoImg");
+        if (bootLogo) bootLogo.src = MAXMAR_LOGO_SRC;
+        if (brandLogo) brandLogo.src = MAXMAR_LOGO_SRC;
+        if (topLogo) topLogo.src = MAXMAR_LOGO_SRC;
+        if (bootLogoImg) bootLogoImg.src = MAXMAR_LOGO_SRC;
+      }
+
+      function loadLogoSource() {
+        loadLargeString("getLogoChunksCount", "getLogoChunk")
+          .then((logoSrc) => {
+            MAXMAR_LOGO_SRC = logoSrc || "";
+            hydrateLogoImages();
+          })
+          .catch((err) => {
+            console.error("Failed to load logo chunks:", err);
+          });
+      }
+
+      function initBootCanvas() {
+        const canvas = document.getElementById("bootCanvas");
+        if (!canvas) return () => {};
+        const ctx = canvas.getContext("2d");
+        let w = canvas.width = window.innerWidth;
+        let h = canvas.height = window.innerHeight;
+        
+        window.addEventListener("resize", () => {
+          w = canvas.width = window.innerWidth;
+          h = canvas.height = window.innerHeight;
+        });
+
+        // Space particles
+        const particles = [];
+        const numParticles = 40;
+        for (let i = 0; i < numParticles; i++) {
+          particles.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: Math.random() * 80 + 40,
+            color: `rgba(${Math.floor(Math.random() * 20)}, ${Math.floor(Math.random() * 80 + 40)}, ${Math.floor(Math.random() * 150 + 100)}, ${Math.random() * 0.12 + 0.03})`,
+            vx: Math.random() * 0.6 - 0.3,
+            vy: Math.random() * 0.4 - 0.2
+          });
+        }
+
+        // Tiny stars
+        const stars = [];
+        const numStars = 60;
+        for (let i = 0; i < numStars; i++) {
+          stars.push({
+            x: Math.random() * w,
+            y: Math.random() * h,
+            r: Math.random() * 1.5 + 0.5,
+            opacity: Math.random() * 0.6 + 0.2,
+            blinkSpeed: Math.random() * 0.02 + 0.005
+          });
+        }
+
+        let animationFrameId;
+        function animate() {
+          ctx.fillStyle = "#000000";
+          ctx.fillRect(0, 0, w, h);
+
+          // Draw space nebula glow (radial gradient)
+          const grad = ctx.createRadialGradient(w/2, h/2, 50, w/2, h/2, Math.max(w, h));
+          grad.addColorStop(0, "rgba(8, 20, 60, 0.45)");
+          grad.addColorStop(0.5, "rgba(2, 6, 20, 0.2)");
+          grad.addColorStop(1, "#000000");
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, w, h);
+
+          // Draw nebula particles (smoke)
+          particles.forEach(p => {
+            p.x += p.vx;
+            p.y += p.vy;
+
+            // wrap around
+            if (p.x < -p.r) p.x = w + p.r;
+            if (p.x > w + p.r) p.x = -p.r;
+            if (p.y < -p.r) p.y = h + p.r;
+            if (p.y > h + p.r) p.y = -p.r;
+
+            ctx.beginPath();
+            const radGrad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+            radGrad.addColorStop(0, p.color);
+            radGrad.addColorStop(1, "rgba(0,0,0,0)");
+            ctx.fillStyle = radGrad;
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          // Draw stars
+          stars.forEach(s => {
+            s.opacity += s.blinkSpeed;
+            if (s.opacity > 0.8 || s.opacity < 0.2) s.blinkSpeed = -s.blinkSpeed;
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(255, 255, 255, ${s.opacity})`;
+            ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+
+          animationFrameId = requestAnimationFrame(animate);
+        }
+
+        animate();
+
+        return () => {
+          cancelAnimationFrame(animationFrameId);
+        };
+      }
+
+      function loadLargeString(countMethod, chunkMethod) {
+        return new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler((count) => {
+              if (count === 0) {
+                resolve("");
+                return;
+              }
+              const chunks = new Array(count);
+              function loadNext(index) {
+                if (index === count) {
+                  resolve(chunks.join(""));
+                  return;
+                }
+                google.script.run
+                  .withSuccessHandler((chunk) => {
+                    chunks[index] = chunk;
+                    loadNext(index + 1);
+                  })
+                  .withFailureHandler((err) => {
+                    reject(err);
+                  })
+                  [chunkMethod](index);
+              }
+              loadNext(0);
+            })
+            .withFailureHandler((err) => {
+              reject(err);
+            })
+            [countMethod]();
+        });
+      }
+
+      function runBootSequence() {
+        const logoContainer = document.getElementById("bootLogoContainer");
+        const bootLogoImg = document.getElementById("bootLogoImg");
+        if (bootLogoImg && MAXMAR_LOGO_SRC) {
+          bootLogoImg.src = MAXMAR_LOGO_SRC;
+        }
+        if (logoContainer) logoContainer.classList.add("show");
+        setTimeout(() => {
+          const bootScreen = document.getElementById("bootScreen");
+          if (bootScreen) {
+            bootScreen.classList.add("hidden");
+            document.body.classList.remove("booting");
+            setTimeout(() => {
+              bootScreen.remove();
+            }, 1000);
+          }
+        }, 1500);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function renderDashboard(data) {
+        dashboardData = data;
+        currentAccessId = data.defaultAccessId || (data.accessProfiles[0] && data.accessProfiles[0].id) || "";
+        selectedCompanyId = getAccessScopedSelectedCompanyId();
+        document.getElementById("loadingState").hidden = true;
+        
+        // Buka kunci panel modul
+        const modulPanel = document.querySelector('.sidebar-modul');
+        if (modulPanel) modulPanel.classList.remove('locked');
+
+        document.getElementById("dashboardRoot").hidden = false;
+        
+        const pageSub = document.getElementById("pageSubtitle");
+        if (pageSub) pageSub.textContent = data.subtitle;
+        
+        const genAt = document.getElementById("generatedAt");
+        if (genAt) genAt.textContent = `Update ${data.generatedAt} | ${data.buildVersion}`;
+        
+        renderTopbar();
+        renderMetricCards(getVisibleMetrics());
+        renderClusterMini(getVisibleClusters());
+        renderTips(data.tips || []);
+        renderAccessOptions(data.accessProfiles || []);
+        renderClusters(getVisibleClusters(), getVisibleCompanies());
+        renderNotices(data.notices || []);
+        renderSelectedCompany();
+        renderModules(data.modules || []);
+        bindAccessEvents();
+        initSidebarModulCollapse();
+      }
+
+      function getCurrentAccessProfile() {
+        return (dashboardData && (dashboardData.accessProfiles || []).find((profile) => profile.id === currentAccessId)) || null;
+      }
+
+      function getVisibleCompanies() {
+        if (!dashboardData) return [];
+        const access = getCurrentAccessProfile();
+        if (!access || access.scope === "all") return dashboardData.companies;
+        return dashboardData.companies.filter((company) => company.id === access.companyId);
+      }
+
+      function getVisibleClusters() {
+        if (!dashboardData) return [];
+        const visibleCompanyIds = new Set(getVisibleCompanies().map((company) => company.id));
+        return dashboardData.clusters.filter((cluster) => cluster.companyIds.some((id) => visibleCompanyIds.has(id)));
+      }
+
+      function getVisibleMetrics() {
+        if (!dashboardData) return [];
+        const visibleCompanies = getVisibleCompanies();
+        const visibleClusters = getVisibleClusters();
+        const activeCompanies = visibleCompanies.filter((company) => company.status === "Aktif").length;
+        return [
+          { label: "Total Cluster", value: visibleClusters.length, detail: "Cluster yang bisa diakses" },
+          { label: "Total Perusahaan", value: visibleCompanies.length, detail: "Perusahaan dalam scope login" },
+          { label: "Perusahaan Aktif", value: activeCompanies, detail: `${visibleCompanies.length - activeCompanies} masih setup` },
+          { label: "Live Site", value: visibleCompanies.reduce((sum, company) => sum + company.metrics.liveSites, 0), detail: "Akumulasi tampilan detail" },
+          { label: "User Aktif", value: visibleCompanies.reduce((sum, company) => sum + company.metrics.activeUsers, 0), detail: "Akun operasional terdaftar" }
+        ];
+      }
+
+      function getAccessScopedSelectedCompanyId() {
+        const visibleCompanies = getVisibleCompanies();
+        if (!visibleCompanies.length) return "";
+        if (visibleCompanies.some((company) => company.id === selectedCompanyId)) return selectedCompanyId;
+        const preferred = getCurrentAccessProfile();
+        if (preferred && preferred.scope === "company" && preferred.companyId) return preferred.companyId;
+        return visibleCompanies[0].id;
+      }
+
+      function renderTopbar() {
+        const access = getCurrentAccessProfile();
+        if (!access) return;
+
+        const profileCard = document.getElementById("profileCard");
+        profileCard.innerHTML = `
+          <div class="avatar">${escapeHtml(access.avatarInitials || "AD")}</div>
+          <div>
+            <strong>${escapeHtml(access.name)}</strong>
+            <small>${escapeHtml(access.role)}</small>
+          </div>
+        `;
+
+        const dateCard = document.getElementById("dateCard");
+        dateCard.innerHTML = `
+          <div class="date-icon">🗓</div>
+          <div>
+            <strong>${escapeHtml(dashboardData.currentDateLabel || "")}</strong>
+            <small>${escapeHtml(dashboardData.currentTimeLabel || "")}</small>
+          </div>
+        `;
+
+        const accessButton = document.getElementById("accessButton");
+        if (accessButton) {
+          accessButton.innerHTML = `
+            <strong>${escapeHtml(access.scope === "all" ? "Mode Super Admin" : "Mode Perusahaan")}</strong>
+            <small>${escapeHtml(access.scope === "all" ? "Akses semua cluster" : access.name)}</small>
+          `;
+        }
+
+        document.getElementById("notifCount").textContent = String(access.notificationCount || 0);
+      }
+
+      function renderAccessOptions(profiles) {
+        const select = document.getElementById("accessSelect");
+        select.innerHTML = profiles.map((profile) => `
+          <option value="${escapeHtml(profile.id)}" ${profile.id === currentAccessId ? "selected" : ""}>
+            ${escapeHtml(profile.role)} - ${escapeHtml(profile.name)}
+          </option>
+        `).join("");
+      }
+
+      function bindAccessEvents() {
+        const accBtn = document.getElementById("accessButton");
+        if (accBtn) accBtn.onclick = () => openAccessModal();
+        document.getElementById("closeAccessModal").onclick = () => closeAccessModal();
+        document.getElementById("applyAccessButton").onclick = () => applyAccessSelection();
+      }
+
+      function openAccessModal() {
+        document.getElementById("loginOverlay").classList.add("open");
+      }
+
+      function closeAccessModal() {
+        document.getElementById("loginOverlay").classList.remove("open");
+      }
+
+      function applyAccessSelection() {
+        currentAccessId = document.getElementById("accessSelect").value;
+        selectedCompanyId = getAccessScopedSelectedCompanyId();
+        
+        // Pastikan kembali ke dashboard utama saat mengganti akses profil
+        document.getElementById("dashboardRoot").hidden = false;
+        document.getElementById("moduleView").hidden = true;
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+
+        renderTopbar();
+        renderMetricCards(getVisibleMetrics());
+        renderClusterMini(getVisibleClusters());
+        renderClusters(getVisibleClusters(), getVisibleCompanies());
+        renderSelectedCompany();
+        closeAccessModal();
+      }
+
+      function renderMetricCards(cards) {
+        const root = document.getElementById("metricCards");
+        root.innerHTML = cards.map((card) => `
+          <article class="metric-card">
+            <p class="metric-label">${escapeHtml(card.label)}</p>
+            <h3 class="metric-value">${escapeHtml(card.value)}</h3>
+            <p class="metric-detail">${escapeHtml(card.detail)}</p>
+          </article>
+        `).join("");
+      }
+
+            function renderClusterMini(clusters) {
+        const root = document.getElementById("clusterMiniList");
+        if (!root) return;
+        
+        root.innerHTML = clusters.map((cluster) => {
+          const cleanClusterName = cluster.name.replace(/^(cl|clu)ster\s+/i, "").trim();
+          const clusterCompanies = (dashboardData.companies || []).filter(
+            (c) => c.cluster === cluster.id || c.cluster.toLowerCase() === cleanClusterName.toLowerCase()
+          );
+          
+          const listId = `sidebar-comp-list-${cluster.id}`;
+          const activeCount = clusterCompanies.filter(c => c.status === 'Aktif').length;
+          
+          return `
+            <div class="modul-group">
+              <div class="modul-item" onclick="toggleSidebarCluster(this, '${listId}')">
+                <span class="modul-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="14" x2="23" y2="14"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="14" x2="4" y2="14"></line></svg>
+                </span>
+                <div class="modul-text" style="display: flex; flex-direction: column;">
+                  <span style="font-size: 0.95rem; font-weight: 600;">${escapeHtml(cleanClusterName)}</span>
+                  <span style="font-size: 0.7rem; color: rgba(238,246,255,0.5);">${clusterCompanies.length} prs · ${activeCount} on</span>
+                </div>
+                <span class="submenu-arrow">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </span>
+              </div>
+              <div class="submenu-container" id="${listId}">
+                ${clusterCompanies.map(comp => `
+                  <div class="submenu-item sidebar-comp-item ${comp.id === selectedCompanyId ? 'active' : ''}" 
+                       data-id="${escapeHtml(comp.id)}" 
+                       onclick="selectCompanyFromSidebar('${escapeHtml(comp.id)}')">
+                    <span class="item-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg></span>
+                    <span class="item-text">${escapeHtml(comp.name)}</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }).join("");
+      }
+
+      function renderTips(tips) {
+        const root = document.getElementById("tipList");
+        if (!root) return;
+        root.innerHTML = tips.map((tip, index) => `
+          <div class="tip-item">
+            <strong>Langkah ${index + 1}</strong>
+            <small>${escapeHtml(tip)}</small>
+          </div>
+        `).join("");
+      }
+
+      function renderClusters(clusters, companies) {
+        const root = document.getElementById("clusterGrid");
+        root.innerHTML = clusters.map((cluster) => {
+          const clusterCompanies = companies.filter((company) => cluster.companyIds.includes(company.id));
+          return `
+            <section class="cluster-card">
+              <div class="cluster-top">
+                <div>
+                  <h3>${escapeHtml(cluster.name)}</h3>
+                  <p>${escapeHtml(cluster.companyCount)} perusahaan · ${escapeHtml(cluster.connectedCompanies)} aktif</p>
+                </div>
+                <span class="badge ${cluster.status === "Aktif" ? "active" : "setup"}">${escapeHtml(cluster.status)}</span>
+              </div>
+              <div class="cluster-stats">
+                <div class="stat-box"><strong>${escapeHtml(cluster.companyCount)}</strong><small>Perusahaan</small></div>
+                <div class="stat-box"><strong>${escapeHtml(cluster.connectedCompanies)}</strong><small>Aktif</small></div>
+                <div class="stat-box"><strong>${escapeHtml(cluster.totalSites)}</strong><small>Live site</small></div>
+              </div>
+              <div class="company-list">
+                ${clusterCompanies.map((company) => `
+                  <button type="button" class="company-pill ${company.id === selectedCompanyId ? "active" : ""}" data-company-id="${escapeHtml(company.id)}">
+                    <div class="company-pill-top">
+                      <div>
+                        <strong>${escapeHtml(company.name)}</strong>
+                        <small>${escapeHtml(company.code)} · ${escapeHtml(company.region)}</small>
+                      </div>
+                      <span class="badge ${company.status === "Aktif" ? "active" : "setup"}">${escapeHtml(company.status)}</span>
+                    </div>
+                    <div class="company-meta">
+                      <span>${escapeHtml(company.latestPeriodLabel)}</span>
+                      <span>${escapeHtml(company.summary)}</span>
+                    </div>
+                  </button>
+                `).join("")}
+              </div>
+            </section>
+          `;
+        }).join("");
+
+        root.querySelectorAll("[data-company-id]").forEach((button) => {
+          button.addEventListener("click", () => {
+            selectedCompanyId = button.getAttribute("data-company-id") || "";
+            
+            // Kembali ke dashboard utama
+            document.getElementById("dashboardRoot").hidden = false;
+            document.getElementById("moduleView").hidden = true;
+            
+            // Sembunyikan sidebar modul secara otomatis jika tidak sedang dipin
+            if (!isModulPinned) {
+              collapseModulSidebar();
+            }
+            
+            // Reset state aktif submenu modul agar konsisten
+            document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+
+            renderClusters(dashboardData.clusters, dashboardData.companies);
+            renderSelectedCompany();
+            
+            // Sinkronisasi kelas active ke sidebar list perusahaan
+            document.querySelectorAll('.sidebar-comp-item').forEach(item => {
+              item.classList.remove('active');
+              if (item.getAttribute('data-id') === selectedCompanyId) {
+                item.classList.add('active');
+                
+                // Buka cluster induknya secara otomatis jika tertutup
+                const parentList = item.parentElement;
+                const parentClusterItem = parentList.previousElementSibling;
+                if (parentList && !parentList.classList.contains('open')) {
+                  parentList.classList.add('open');
+                  if (parentClusterItem) parentClusterItem.classList.add('open');
+                }
+              }
+            });
+          });
+        });
+      }
+
+      function getSelectedCompany() {
+        return getVisibleCompanies().find((company) => company.id === selectedCompanyId) || null;
+      }
+
+      function renderSelectedCompany() {
+        const company = getSelectedCompany();
+        if (!company) return;
+
+        // Update lokasi cuaca online secara live
+        updateLiveWeather(company.cluster);
+
+        document.getElementById("detailCompany").innerHTML = `
+          <div>
+            <h3>${escapeHtml(company.name)}</h3>
+            <p>${escapeHtml(company.cluster)} · ${escapeHtml(company.region)} · ${escapeHtml(company.code)}</p>
+            <small>Terakhir update: ${escapeHtml(company.metrics.lastUpdated)}</small>
+          </div>
+          <div><span class="badge ${company.status === "Aktif" ? "active" : "setup"}">${escapeHtml(company.status)}</span></div>
+        `;
+
+        document.getElementById("detailMetrics").innerHTML = `
+          <div class="detail-metric"><small>Live Site</small><strong>${escapeHtml(company.metrics.liveSites)}</strong></div>
+          <div class="detail-metric"><small>User Aktif</small><strong>${escapeHtml(company.metrics.activeUsers)}</strong></div>
+          <div class="detail-metric"><small>Perizinan</small><strong>${escapeHtml(company.metrics.permissions)}</strong></div>
+          <div class="detail-metric"><small>Finance</small><strong>${escapeHtml(company.metrics.finance)}</strong></div>
+        `;
+
+        document.getElementById("detailProgress").textContent = company.metrics.highlight;
+        renderQuickGrid(company.quickMenu || []);
+        renderStatus(company.statusRows || [], company.coveragePercent);
+        renderActivities(company.activities || []);
+        renderMonthly(company.monthlyCards || []);
+        drawChart(company.chart);
+      }
+
+      function renderQuickGrid(items) {
+        const root = document.getElementById("quickGrid");
+        root.innerHTML = items.map((item) => `
+          <div class="quick-card">
+            <div class="quick-icon ${toneMap[item.tone] || "tone-blue"}">${escapeHtml(iconMap[item.icon] || "•")}</div>
+            <strong>${escapeHtml(item.label)}</strong>
+            <small>${escapeHtml(item.tone || "")}</small>
+          </div>
+        `).join("");
+      }
+
+      function renderStatus(rows, coveragePercent) {
+        const root = document.getElementById("statusList");
+        root.innerHTML = rows.map((row) => `
+          <div class="status-item">
+            <div class="status-row">
+              <div><strong>${escapeHtml(row.label)}</strong><small>${escapeHtml(row.status)}</small></div>
+              <div><strong>${escapeHtml(row.value)}</strong><small>${escapeHtml(row.suffix)}</small></div>
+            </div>
+            <div class="progress"><span style="width:${coveragePercent}%"></span></div>
+          </div>
+        `).join("");
+      }
+
+      function renderActivities(items) {
+        const root = document.getElementById("activityList");
+        root.innerHTML = items.map((item) => `
+          <div class="activity-item">
+            <strong>${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.detail)}</small>
+            <small>${escapeHtml(item.time)}</small>
+          </div>
+        `).join("");
+      }
+
+      function renderMonthly(items) {
+        const root = document.getElementById("monthlyList");
+        root.innerHTML = items.map((item) => `
+          <div class="monthly-item">
+            <div class="monthly-row">
+              <div><strong>${escapeHtml(item.label)}</strong><small>${escapeHtml(item.change)}</small></div>
+              <div><strong>${escapeHtml(item.value)}</strong></div>
+            </div>
+          </div>
+        `).join("");
+      }
+
+      function renderNotices(items) {
+        const root = document.getElementById("noticeList");
+        root.innerHTML = items.map((item) => `
+          <div class="notice">
+            <strong>${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.detail)}</small>
+          </div>
+        `).join("");
+      }
+
+      function drawChart(chart) {
+        window.__companyChartData = chart;
+        const canvas = document.getElementById("companyChart");
+        const context = canvas.getContext("2d");
+        const pixelRatio = window.devicePixelRatio || 1;
+        const bounds = canvas.getBoundingClientRect();
+        const width = bounds.width || canvas.width;
+        const height = bounds.height || canvas.height;
+        canvas.width = width * pixelRatio;
+        canvas.height = height * pixelRatio;
+        context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+        context.clearRect(0, 0, width, height);
+
+        const padding = { top: 18, right: 18, bottom: 34, left: 26 };
+        const plotWidth = width - padding.left - padding.right;
+        const plotHeight = height - padding.top - padding.bottom;
+        const maxValue = Math.max(...chart.series.flatMap((item) => item.values), 1);
+
+        context.strokeStyle = "rgba(148, 163, 184, 0.22)";
+        for (let step = 0; step <= 4; step += 1) {
+          const y = padding.top + (plotHeight / 4) * step;
+          context.beginPath();
+          context.moveTo(padding.left, y);
+          context.lineTo(width - padding.right, y);
+          context.stroke();
+        }
+
+        context.fillStyle = "#64748b";
+        context.font = "12px Plus Jakarta Sans";
+        chart.labels.forEach((label, index) => {
+          const x = padding.left + (plotWidth / (chart.labels.length - 1 || 1)) * index;
+          context.fillText(label, x - 10, height - 10);
+        });
+
+        chart.series.forEach((series) => {
+          context.beginPath();
+          context.lineWidth = 3;
+          context.strokeStyle = series.color;
+          series.values.forEach((value, index) => {
+            const x = padding.left + (plotWidth / (series.values.length - 1 || 1)) * index;
+            const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
+            if (index === 0) context.moveTo(x, y);
+            else context.lineTo(x, y);
+          });
+          context.stroke();
+
+          series.values.forEach((value, index) => {
+            const x = padding.left + (plotWidth / (series.values.length - 1 || 1)) * index;
+            const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
+            context.beginPath();
+            context.fillStyle = series.color;
+            context.arc(x, y, 4, 0, Math.PI * 2);
+            context.fill();
+          });
+        });
+      }
+
+      function showError(message) {
+        document.getElementById("loadingState").hidden = true;
+        const box = document.getElementById("errorState");
+        box.hidden = false;
+        box.textContent = message;
+      }
+
+      window.addEventListener("resize", () => {
+        if (window.__companyChartData) drawChart(window.__companyChartData);
+      });
+      runBootSequence();
+
+      google.script.run
+        .withSuccessHandler(renderDashboard)
+        .withFailureHandler((error) => showError(error && error.message ? error.message : "Gagal memuat dashboard"))
+        .getDashboardData();
+      
+      // RESIZER LOGIC
+      (function() {
+        const resizer = document.getElementById("resizer");
+        const layout = document.getElementById("dashboardLayout");
+        let dragStartX = 0;
+        let startWidth = 270;
+
+        resizer.addEventListener("pointerdown", function(e) {
+          e.preventDefault();
+          resizer.setPointerCapture(e.pointerId);
+          resizer.classList.add("dragging");
+              document.body.classList.add("is-resizing");
+          document.body.style.userSelect = "none";
+          dragStartX = e.clientX;
+          // Get current width from computed style
+          const computed = window.getComputedStyle(layout).getPropertyValue("--sidebar-width");
+          startWidth = parseFloat(computed) || 270;
+        });
+
+        resizer.addEventListener("pointermove", function(e) {
+          if (!resizer.hasPointerCapture(e.pointerId)) return;
+          const dx = e.clientX - dragStartX;
+          const newWidth = Math.max(150, Math.min(600, startWidth + dx));
+          layout.style.setProperty("--sidebar-width", newWidth + "px");
+        });
+
+        function endDrag(e) {
+          resizer.releasePointerCapture(e.pointerId);
+          resizer.classList.remove("dragging");
+              document.body.classList.remove("is-resizing");
+          document.body.style.userSelect = "";
+        }
+        resizer.addEventListener("pointerup",     endDrag);
+        resizer.addEventListener("pointercancel", endDrag);
+      })();
+
+      
+      // RESIZER MODUL LOGIC
+      (function() {
+        const resizerModul = document.getElementById("resizer-modul");
+        const layout = document.getElementById("dashboardLayout");
+        let dragStartX = 0;
+        let startWidth = 240;
+
+        if (resizerModul) {
+            resizerModul.addEventListener("pointerdown", function(e) {
+              e.preventDefault();
+              resizerModul.setPointerCapture(e.pointerId);
+              resizerModul.classList.add("dragging");
+              document.body.classList.add("is-resizing");
+              document.body.style.userSelect = "none";
+              dragStartX = e.clientX;
+              const computed = window.getComputedStyle(layout).getPropertyValue("--sidebar-modul-width");
+              startWidth = parseFloat(computed) || 240;
+            });
+
+            resizerModul.addEventListener("pointermove", function(e) {
+              if (!resizerModul.hasPointerCapture(e.pointerId)) return;
+              const dx = e.clientX - dragStartX;
+              const newWidth = Math.max(150, Math.min(500, startWidth + dx));
+              layout.style.setProperty("--sidebar-modul-width", newWidth + "px");
+            });
+
+            function endDrag(e) {
+              resizerModul.releasePointerCapture(e.pointerId);
+              resizerModul.classList.remove("dragging");
+              document.body.classList.remove("is-resizing");
+              document.body.style.userSelect = "";
+            }
+            resizerModul.addEventListener("pointerup",     endDrag);
+            resizerModul.addEventListener("pointercancel", endDrag);
+        }
+      })();
+
+      loadLogoSource();
+      document.body.classList.add("booting");
+
+      // ── Pinch-to-Zoom untuk HP Android ─────────────────────────────────────
+      // Target: #zoomHost (scrollable). Zoom = CSS zoom layout.
+      (function() {
+        var host    = document.getElementById("zoomHost");
+        var layout  = document.getElementById("dashboardLayout");
+        var curScale = 1;
+        var pinching = false;
+        var startDist = 0, startScale = 1;
+        var startScrollX = 0, startScrollY = 0;
+        var startMidX = 0, startMidY = 0;
+
+        function getDistance(t) {
+          var dx = t[0].clientX - t[1].clientX;
+          var dy = t[0].clientY - t[1].clientY;
+          return Math.sqrt(dx * dx + dy * dy);
+        }
+        function getMid(t) {
+          return {
+            x: (t[0].clientX + t[1].clientX) / 2,
+            y: (t[0].clientY + t[1].clientY) / 2
+          };
+        }
+        function applyZoom() {
+          layout.style.zoom = curScale;
+          layout.style.height = (100 / (curScale || 1)) + "vh";
+        }
+
+        // Auto-fit agar di HP langsung tampil full layout (1280px) fit ke lebar layar HP
+        function fitToScreen() {
+          if (window.innerWidth < 1280) {
+            curScale = window.innerWidth / 1280;
+          } else {
+            curScale = 1;
+          }
+          applyZoom();
+        }
+
+        // Jalankan fitToScreen saat pertama kali dimuat
+        fitToScreen();
+        // Ulangi beberapa kali setelah boot screen hilang agar presisi
+        setTimeout(fitToScreen, 500);
+        setTimeout(fitToScreen, 1500);
+
+        // Auto-fit saat orientasi HP diputar (portrait <-> landscape)
+        window.addEventListener("resize", function() {
+          if (!pinching) {
+            fitToScreen();
+          }
+        });
+
+        host.addEventListener("touchstart", function(e) {
+          if (e.touches.length === 2) {
+            pinching    = true;
+            startDist   = getDistance(e.touches);
+            startScale  = curScale;
+            var m       = getMid(e.touches);
+            startMidX   = m.x;
+            startMidY   = m.y;
+            startScrollX = host.scrollLeft;
+            startScrollY = host.scrollTop;
+          }
+        }, { passive: true });
+
+        host.addEventListener("touchmove", function(e) {
+          if (e.touches.length === 2 && pinching) {
+            e.preventDefault();
+            var newDist  = getDistance(e.touches);
+            // Batas minimal zoom diatur sangat kecil agar bisa mencubit mengecil di HP
+            var minLimit = window.innerWidth < 1280 ? (window.innerWidth / 1280) * 0.3 : 0.15;
+            curScale     = Math.max(minLimit, Math.min(4, startScale * (newDist / startDist)));
+            var m        = getMid(e.touches);
+            var scaleRatio = curScale / startScale;
+            host.scrollLeft = (startScrollX + startMidX) * scaleRatio - m.x;
+            host.scrollTop  = (startScrollY + startMidY) * scaleRatio - m.y;
+            applyZoom();
+          }
+        }, { passive: false });
+
+        host.addEventListener("touchend", function(e) {
+          if (e.touches.length < 2) {
+            pinching = false;
+            // Hanya snap kembali jika skala dicubit sangat ekstrem kecil (di bawah 40% lebar layar)
+            var fitScale = window.innerWidth < 1280 ? (window.innerWidth / 1280) : 1;
+            if (curScale < fitScale * 0.4) {
+              fitToScreen();
+              host.scrollLeft = 0;
+              host.scrollTop  = 0;
+            }
+          }
+        }, { passive: true });
+      })();
+      function selectModul(el, name) {
+        // Cek apakah PT/Perusahaan sudah dipilih
+        if (!selectedCompanyId) {
+          showToast('⚠️ Pilih Cluster dan PT terlebih dahulu sebelum membuka modul!', 'warning');
+          return;
+        }
+
+        document.querySelectorAll('.modul-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+        el.classList.add('active');
+        
+        // Tutup semua submenu container saat memilih modul utama non-submenu
+        document.querySelectorAll('.submenu-container').forEach(menu => {
+          menu.classList.remove('open');
+        });
+        document.querySelectorAll('.modul-item').forEach(item => {
+          item.classList.remove('open');
+        });
+
+        // Kembalikan ke dashboard utama
+        document.getElementById("dashboardRoot").hidden = false;
+        document.getElementById("moduleView").hidden = true;
+        console.log("Selected Module:", name);
+      }
+
+      function showToast(message, type = 'info') {
+        let toast = document.getElementById('odesyToast');
+        if (!toast) {
+          toast = document.createElement('div');
+          toast.id = 'odesyToast';
+          toast.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#fff;padding:12px 22px;border-radius:12px;font-size:0.92rem;font-weight:600;box-shadow:0 8px 32px rgba(0,0,0,0.35);z-index:9999;transition:transform 0.35s cubic-bezier(0.4,0,0.2,1),opacity 0.35s;opacity:0;border-left:4px solid #38bdf8;display:flex;align-items:center;gap:10px;white-space:nowrap;';
+          document.body.appendChild(toast);
+        }
+        if (type === 'warning') toast.style.borderLeftColor = '#f59e0b';
+        else if (type === 'error') toast.style.borderLeftColor = '#ef4444';
+        else toast.style.borderLeftColor = '#38bdf8';
+        toast.textContent = message;
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(-50%) translateY(0)';
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+          toast.style.opacity = '0';
+          toast.style.transform = 'translateX(-50%) translateY(80px)';
+        }, 3200);
+      }
+
+      function getModuleIcon(name) {
+        const normalized = name.toLowerCase().replace(/\s+/g, '');
+        if (normalized.includes('budidaya')) return '🐟';
+        if (normalized.includes('hm') || normalized.includes('km') || normalized.includes('jam')) return '🚚';
+        if (normalized.includes('gudang') || normalized.includes('inventory')) return '🏢';
+        if (normalized.includes('solar') || normalized.includes('bbm') || normalized.includes('bakar')) return '⛽';
+        if (normalized.includes('limbah') || normalized.includes('b3') || normalized.includes('recycle')) return '♻️';
+        if (normalized.includes('izin') || normalized.includes('perizinan') || normalized.includes('legal')) return '📝';
+        if (normalized.includes('po') || normalized.includes('surabaya') || normalized.includes('purchase')) return '🛍️';
+        if (normalized.includes('keuangan') || normalized.includes('uang') || normalized.includes('finance') || normalized.includes('kas')) return '🪙';
+        if (normalized.includes('sdm') || normalized.includes('hrd') || normalized.includes('karyawan') || normalized.includes('staff')) return '👥';
+        if (normalized.includes('kendaraan') || normalized.includes('mobil') || normalized.includes('motor')) return '🚗';
+        if (normalized.includes('dokumen') || normalized.includes('dokumentasi') || normalized.includes('file')) return '📄';
+        if (normalized.includes('lapor') || normalized.includes('laporan') || normalized.includes('report')) return '📊';
+        return '📦';
+      }
+
+            function renderModules(modules) {
+        const listContainer = document.querySelector('.modul-list');
+        if (!listContainer) return;
+        
+        if (!modules || modules.length === 0) {
+          listContainer.innerHTML = '<div style="padding:10px 14px;color:rgba(255,255,255,0.4);font-size:0.9rem;">Tidak ada modul</div>';
+          return;
+        }
+        
+        listContainer.innerHTML = modules.map((modul, index) => {
+          const icon = getModuleIcon(modul.name || modul);
+          const nameClean = (modul.name || modul).trim();
+          const categories = modul.categories || [];
+          
+          if (categories.length > 0) {
+            const subMenuId = `submenu-${nameClean.replace(/\s+/g, '')}`;
+            
+            return `
+              <div class="modul-group">
+                <div class="modul-item" onclick="toggleSubmenu(this, '${subMenuId}')">
+                  <span class="modul-icon">${icon}</span>
+                  <span class="modul-text">${escapeHtml(nameClean)}</span>
+                  <span class="submenu-arrow">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                  </span>
+                </div>
+                <div class="submenu-container" id="${subMenuId}">
+                  ${categories.map(cat => {
+                    const catId = `cat-${nameClean.replace(/\s+/g, '')}-${cat.name.replace(/\s+/g, '')}`;
+                    return `
+                      <div class="modul-category-group">
+                        <div class="submenu-category" onclick="toggleSubCategory(event, this, '${catId}')">
+                          <span class="cat-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg></span>
+                          <span class="category-text">${escapeHtml(cat.name)}</span>
+                          <span class="category-arrow">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                          </span>
+                        </div>
+                        <div class="sub-category-container" id="${catId}">
+                          ${cat.items.map(item => `
+                            <div class="submenu-item" onclick="openWebAppUrl(event, '${item.url}')">
+                              <span class="item-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="13 2 13 9 20 9"></polyline></svg></span>
+                              <span class="item-text">${escapeHtml(item.name)}</span>
+                            </div>
+                          `).join('')}
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }
+          
+          return `
+            <div class="modul-item" onclick="selectModul(this, '${escapeHtml(nameClean)}')">
+              <span class="modul-icon">${icon}</span>
+              <span class="modul-text">${escapeHtml(nameClean)}</span>
+            </div>
+          `;
+        }).join('');
+      }
+
+      function toggleSubCategory(event, el, catId) {
+        event.stopPropagation();
+        const catContainer = document.getElementById(catId);
+        if (!catContainer) return;
+        
+        const isOpen = catContainer.classList.contains('open');
+        
+        if (isOpen) {
+          catContainer.classList.remove('open');
+          el.classList.remove('open');
+        } else {
+          catContainer.classList.add('open');
+          el.classList.add('open');
+        }
+      }
+
+      function toggleSubmenu(el, subMenuId) {
+        const subMenu = document.getElementById(subMenuId);
+        if (!subMenu) return;
+        
+        const isOpen = subMenu.classList.contains('open');
+        
+        // Toggle submenu terpilih
+        if (isOpen) {
+          subMenu.classList.remove('open');
+          el.classList.remove('open');
+          // Tutup kategori di dalamnya
+          subMenu.querySelectorAll('.sub-category-container').forEach(sc => sc.classList.remove('open'));
+          subMenu.querySelectorAll('.submenu-category').forEach(sc => sc.classList.remove('open'));
+        } else {
+          subMenu.classList.add('open');
+          el.classList.add('open');
+          // Otomatis buka kategori di dalamnya agar user langsung melihat item
+          subMenu.querySelectorAll('.sub-category-container').forEach(sc => sc.classList.add('open'));
+          subMenu.querySelectorAll('.submenu-category').forEach(sc => sc.classList.add('open'));
+        }
+      }
+
+      function openWebAppUrl(event, url) {
+        event.stopPropagation();
+        
+        // Hilangkan class active dari modul/submenu lain
+        document.querySelectorAll('.modul-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+        
+        const el = event.currentTarget;
+        el.classList.add('active');
+        
+        // Highlight juga modul induknya
+        const parentGroup = el.closest('.modul-group');
+        if (parentGroup) {
+          const parentItem = parentGroup.querySelector('.modul-item');
+          if (parentItem) parentItem.classList.add('active');
+        }
+        
+        // Tambahkan context cluster dan company ke URL
+        let finalUrl = url;
+        if (finalUrl && finalUrl.trim() !== "") {
+          try {
+            // Check if URL is a JSON string for company-specific routing
+            if (finalUrl.startsWith('{')) {
+               const urlMap = JSON.parse(finalUrl);
+               finalUrl = urlMap[selectedCompanyId] || urlMap['DEFAULT'];
+               if (!finalUrl) {
+                 alert("Akses Ditolak:\nPerusahaan " + selectedCompanyId + " belum dikonfigurasi untuk modul ini (Data / Folder belum tersedia).");
+                 return;
+               }
+            }
+          } catch(e) {}
+
+          if (finalUrl) {
+            const sep = finalUrl.includes('?') ? '&' : '?';
+            const company = getVisibleCompanies().find(c => c.id === selectedCompanyId);
+            const currentClusterId = company ? company.cluster : '';
+            finalUrl += `${sep}clusterId=${encodeURIComponent(currentClusterId)}&companyId=${encodeURIComponent(selectedCompanyId || '')}`;
+          }
+        }
+        
+        // Alihkan layar ke Module View (iframe)
+        document.getElementById("dashboardRoot").hidden = true;
+        const viewContainer = document.getElementById("moduleView");
+        viewContainer.hidden = false;
+        
+        viewContainer.innerHTML = `
+          <div class="iframe-container" style="width:100%; height:100%; display:flex; flex-direction:column; min-height:0;">
+            <div class="iframe-header" style="padding: 10px 20px; background: white; border-bottom: 1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between;">
+              <span style="font-weight:600; color:#0f172a;">${escapeHtml(el.textContent.trim())}</span>
+              <button onclick="showDashboardMain()" style="padding:4px 10px; background:#f1f5f9; border:none; border-radius:6px; cursor:pointer; font-size:12px; color:#475569;">Tutup Aplikasi</button>
+            </div>
+            <iframe src="${finalUrl}" style="width:100%; flex:1; border:none;" title="Web App View"></iframe>
+          </div>
+        `;
+      }
+
+      function showDashboardMain() {
+        document.getElementById("dashboardRoot").hidden = false;
+        document.getElementById("moduleView").hidden = true;
+        
+        if (!isModulPinned) {
+          collapseModulSidebar();
+        }
+        
+        document.querySelectorAll('.modul-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll('.submenu-container').forEach(menu => menu.classList.remove('open'));
+        document.querySelectorAll('.sub-category-container').forEach(menu => menu.classList.remove('open'));
+        document.querySelectorAll('.modul-item').forEach(item => item.classList.remove('open'));
+        document.querySelectorAll('.submenu-category').forEach(item => item.classList.remove('open'));
+        
+        const firstModul = document.querySelector('.modul-item');
+        if (firstModul) firstModul.classList.add('active');
+      }
+
+      function getModuleIntroIcon(subName) {
+        if (subName === 'Pakan') return '🌾';
+        if (subName === 'Saprotam') return '🧪';
+        if (subName === 'Laboratorium') return '🔬';
+        if (subName === 'Aplikasi') return '💻';
+        if (subName === 'Stok Opname (SO)') return '📋';
+        if (subName === 'Laporan') return '📊';
+        return '📁';
+      }
+
+      function renderSubViewContent(parentName, subName) {
+        const viewContainer = document.getElementById("moduleView");
+        if (!viewContainer) return;
+        
+        const introIcon = getModuleIntroIcon(subName);
+        let detailHtml = '';
+        
+        if (parentName === 'Budidaya') {
+          // Mock data PDF realistis
+          let docs = [];
+          if (subName === 'Pakan') {
+            docs = [
+              { title: "SOP Pemberian Pakan Udang Vaname.pdf", date: "15 Jul 2026", size: "1.2 MB" },
+              { title: "Laporan Distribusi Pakan Mingguan - Juli 2026.pdf", date: "12 Jul 2026", size: "3.4 MB" },
+              { title: "Analisis FCR & Nutrisi Pakan Mandiri.pdf", date: "08 Jul 2026", size: "850 KB" },
+              { title: "Form Monitoring Pakan Harian.pdf", date: "05 Jul 2026", size: "420 KB" }
+            ];
+          } else if (subName === 'Saprotam') {
+            docs = [
+              { title: "Daftar Inventaris Alat & Bahan Kimia Tambak.pdf", date: "14 Jul 2026", size: "980 KB" },
+              { title: "SOP Karantina Air & Persiapan Kolam.pdf", date: "10 Jul 2026", size: "1.5 MB" },
+              { title: "Purchase Order Saprotam Q2 2026.pdf", date: "05 Jul 2026", size: "2.1 MB" },
+              { title: "Sertifikat Kualitas Benur & Probiotik.pdf", date: "01 Jul 2026", size: "1.1 MB" }
+            ];
+          } else if (subName === 'Laboratorium') {
+            docs = [
+              { title: "Laporan Uji Kualitas Air Mingguan.pdf", date: "16 Jul 2026", size: "1.8 MB" },
+              { title: "Hasil Analisis Bakteri Vibrio Kolam 3 & 4.pdf", date: "14 Jul 2026", size: "750 KB" },
+              { title: "SOP Pemeriksaan PCR Penyakit Udang (WSSV).pdf", date: "11 Jul 2026", size: "1.3 MB" },
+              { title: "Grafik Perkembangan Parameter Fisiko-Kimia.pdf", date: "06 Jul 2026", size: "2.5 MB" }
+            ];
+          }
+          
+          detailHtml = `
+            <div class="document-section">
+              <div class="section-heading">Dokumen PDF Tersimpan</div>
+              <div class="document-grid">
+                ${docs.map(doc => `
+                  <div class="document-card" onclick="alert('Simulasi: Membuka berkas PDF \\'${doc.title}\\'')">
+                    <div class="doc-icon-box">📄</div>
+                    <div class="doc-info">
+                      <h4 class="doc-title" title="${escapeHtml(doc.title)}">${escapeHtml(doc.title)}</h4>
+                      <span class="doc-meta">${doc.date} | ${doc.size}</span>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        } else if (parentName === 'Gudang') {
+          if (subName === 'Aplikasi') {
+            detailHtml = `
+              <div class="table-view-panel">
+                <div class="section-heading">Log Pengajuan Aplikasi Gudang</div>
+                <table class="view-table">
+                  <thead>
+                    <tr>
+                      <th>No Tiket</th>
+                      <th>Detail Pengajuan</th>
+                      <th>Tanggal</th>
+                      <th>Petugas Lapangan</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>#TKT-99101</strong></td>
+                      <td>Pengeluaran Pakan Grow-Out Kolam 2</td>
+                      <td>17 Jul 2026</td>
+                      <td>Ahmad Fauzi</td>
+                      <td><span class="badge badge-success">Selesai</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>#TKT-99102</strong></td>
+                      <td>Refill BBM Solar Generator Cadangan</td>
+                      <td>17 Jul 2026</td>
+                      <td>Budi Santoso</td>
+                      <td><span class="badge badge-warning">Proses</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>#TKT-99103</strong></td>
+                      <td>Pengambilan Disinfektan & Klorin Kolam 5</td>
+                      <td>16 Jul 2026</td>
+                      <td>Hendra Wijaya</td>
+                      <td><span class="badge badge-success">Selesai</span></td>
+                    </tr>
+                    <tr>
+                      <td><strong>#TKT-99104</strong></td>
+                      <td>Peralatan Konstruksi Jaring Ganda</td>
+                      <td>15 Jul 2026</td>
+                      <td>Siti Aminah</td>
+                      <td><span class="badge badge-info">Pending</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            `;
+          } else if (subName === 'Stok Opname (SO)') {
+            detailHtml = `
+              <div class="table-view-panel">
+                <div class="section-heading">Catatan Stok Opname Fisik</div>
+                <table class="view-table">
+                  <thead>
+                    <tr>
+                      <th>Kode Item</th>
+                      <th>Deskripsi Produk</th>
+                      <th>Stok Buku (Sistem)</th>
+                      <th>Stok Aktual (Fisik)</th>
+                      <th>Selisih</th>
+                      <th>Kondisi Fisik</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><strong>FEED-A01</strong></td>
+                      <td>Pakan Udang Starter (25kg/sak)</td>
+                      <td>120 Sak</td>
+                      <td>120 Sak</td>
+                      <td>0</td>
+                      <td>Baik & Kering</td>
+                    </tr>
+                    <tr>
+                      <td><strong>CHEM-CL01</strong></td>
+                      <td>Klorin Tablet 90% (50kg/drum)</td>
+                      <td>15 Drum</td>
+                      <td>14 Drum</td>
+                      <td><span style="color:#ef4444;font-weight:700;">-1</span></td>
+                      <td>1 Drum Bocor/Pecah</td>
+                    </tr>
+                    <tr>
+                      <td><strong>FUEL-SOLAR</strong></td>
+                      <td>Bahan Bakar Diesel Dexlite</td>
+                      <td>1,200 Liter</td>
+                      <td>1,195 Liter</td>
+                      <td><span style="color:#ef4444;font-weight:700;">-5 L</span></td>
+                      <td>Penyusutan Suhu</td>
+                    </tr>
+                    <tr>
+                      <td><strong>PROB-BAC</strong></td>
+                      <td>Probiotik Bacillus (20L/galon)</td>
+                      <td>40 Galon</td>
+                      <td>40 Galon</td>
+                      <td>0</td>
+                      <td>Segel Utuh</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            `;
+          } else if (subName === 'Laporan') {
+            const docs = [
+              { title: "Laporan Stock Opname Triwulan II.pdf", date: "30 Jun 2026", size: "1.9 MB" },
+              { title: "Laporan Gudang Keluar-Masuk Barang Bulanan.pdf", date: "28 Jun 2026", size: "1.4 MB" },
+              { title: "Rekap Audit Penggunaan Solar Semester I.pdf", date: "25 Jun 2026", size: "3.2 MB" }
+            ];
+            detailHtml = `
+              <div class="document-section">
+                <div class="section-heading">Berkas Laporan Inventaris Gudang</div>
+                <div class="document-grid">
+                  ${docs.map(doc => `
+                    <div class="document-card" onclick="alert('Simulasi: Membuka berkas PDF \\'${doc.title}\\'')">
+                      <div class="doc-icon-box">📄</div>
+                      <div class="doc-info">
+                        <h4 class="doc-title" title="${escapeHtml(doc.title)}">${escapeHtml(doc.title)}</h4>
+                        <span class="doc-meta">${doc.date} | ${doc.size}</span>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            `;
+          }
+        }
+        
+        viewContainer.innerHTML = `
+          <div class="module-view-header">
+            <div class="module-breadcrumb">
+              <span class="breadcrumb-parent">${escapeHtml(parentName)}</span>
+              <span class="breadcrumb-separator">/</span>
+              <span class="breadcrumb-current">${escapeHtml(subName)}</span>
+            </div>
+          </div>
+
+          <div class="module-view-body">
+            <div class="view-intro-card" style="margin-bottom: 24px;">
+              <div class="intro-icon-box">${introIcon}</div>
+              <div>
+                <h2 class="view-title">${escapeHtml(subName)}</h2>
+                <p class="view-desc">Detail data and berkas PDF untuk sub-modul ${escapeHtml(subName)} di bawah kelompok ${escapeHtml(parentName)}.</p>
+              </div>
+            </div>
+
+            ${detailHtml}
+          </div>
+        `;
+      }
+
+      // Collapsible Sidebar Modul Logic
+      let isModulPinned = false; try { isModulPinned = localStorage.getItem("isModulPinned") === "true"; } catch(e) {}
+      let isModulHovered = false;
+
+      function initSidebarModulCollapse() {
+        const sidebar = document.getElementById("sidebarModul");
+        const toggle = document.getElementById("sidebarModulToggle");
+        if (!sidebar || !toggle) return;
+        
+        // Hover listeners
+        sidebar.addEventListener("mouseenter", () => {
+          isModulHovered = true;
+          expandModulSidebar();
+        });
+        sidebar.addEventListener("mouseleave", () => {
+          isModulHovered = false;
+          checkAndCollapseModulSidebar();
+        });
+        
+        toggle.addEventListener("mouseenter", () => {
+          isModulHovered = true;
+          expandModulSidebar();
+        });
+        toggle.addEventListener("mouseleave", () => {
+          isModulHovered = false;
+          checkAndCollapseModulSidebar();
+        });
+
+        // Click listener on toggle triangle button
+        toggle.addEventListener("click", (e) => {
+          toggleSidebarModulManual();
+        });
+
+        // Set awal berdasarkan pin state yang tersimpan
+        if (isModulPinned) {
+          expandModulSidebar();
+        } else {
+          collapseModulSidebar();
+        }
+        updatePinButtonUI();
+      }
+
+      function expandModulSidebar() {
+        const layout = document.querySelector(".layout");
+        const sidebar = document.getElementById("sidebarModul");
+        const toggleIcon = document.getElementById("toggleTriangle");
+        if (!layout || !sidebar || !toggleIcon) return;
+        
+        layout.classList.add("modul-expanded");
+        sidebar.classList.remove("collapsed");
+        toggleIcon.textContent = "◀";
+      }
+
+      function collapseModulSidebar() {
+        const layout = document.querySelector(".layout");
+        const sidebar = document.getElementById("sidebarModul");
+        const toggleIcon = document.getElementById("toggleTriangle");
+        if (!layout || !sidebar || !toggleIcon) return;
+        
+        layout.classList.remove("modul-expanded");
+        sidebar.classList.add("collapsed");
+        toggleIcon.textContent = "▶";
+      }
+
+      function checkAndCollapseModulSidebar() {
+        setTimeout(() => {
+          if (!isModulPinned && !isModulHovered) {
+            collapseModulSidebar();
+          }
+        }, 200);
+      }
+
+      function togglePinSidebarModul(event) {
+        if (event) event.stopPropagation();
+        
+        isModulPinned = !isModulPinned;
+        localStorage.setItem("isModulPinned", isModulPinned);
+        
+        if (isModulPinned) {
+          expandModulSidebar();
+        } else {
+          if (!isModulHovered) {
+            collapseModulSidebar();
+          }
+        }
+        updatePinButtonUI();
+      }
+
+      function toggleSidebarModulManual() {
+        isModulPinned = !isModulPinned;
+        localStorage.setItem("isModulPinned", isModulPinned);
+        if (isModulPinned) {
+          expandModulSidebar();
+        } else {
+          collapseModulSidebar();
+        }
+        updatePinButtonUI();
+      }
+
+      function updatePinButtonUI() {
+        const pinBtn = document.getElementById("pinButton");
+        if (!pinBtn) return;
+        
+        if (isModulPinned) {
+          pinBtn.classList.add("pinned");
+          pinBtn.innerHTML = 
+            '<svg class="pin-icon" style="transform: scale(1.5); color: var(--sky);" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<line x1="12" y1="17" x2="12" y2="22"></line>' +
+              '<path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.58A2 2 0 0 1 15 9.18V5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4.18a2 2 0 0 1-.78 1.24l-2.78 3.58A2 2 0 0 0 5 15.24z"></path>' +
+            '</svg>' +
+            '<span class="pin-text" style="margin-left: 8px;">Pinned</span>';
+        } else {
+          pinBtn.classList.remove("pinned");
+          pinBtn.innerHTML = 
+            '<svg class="pin-icon" style="transform: scale(1.5); color: #64748b;" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+              '<line x1="2" y1="2" x2="22" y2="22"></line>' +
+              '<line x1="12" y1="17" x2="12" y2="22"></line>' +
+              '<path d="M9 10.76a2 2 0 0 1-1.11 1.79 4 4 0 0 0-2.3 3.62C5.53 16.63 6 17 6.63 17h11.5c.2 0 .39-.05.56-.15"></path>' +
+              '<path d="M15 10V5a2 2 0 0 0-2-2H9.5a2 2 0 0 0-2 2v2.58"></path>' +
+            '</svg>' +
+            '<span class="pin-text" style="margin-left: 8px;">Pin</span>';
+        }
+      }
+
+      function toggleSidebarCluster(el, listId) {
+        const list = document.getElementById(listId);
+        if (!list) return;
+        
+        const isOpen = list.classList.contains('open');
+        
+        // Hapus active dari semua cluster terlebih dulu
+        document.querySelectorAll('#clusterMiniList .modul-item').forEach(item => item.classList.remove('active'));
+        
+        if (isOpen) {
+          list.classList.remove('open');
+          el.classList.remove('open');
+          // Jika cluster ditutup, hapus active-nya juga
+          el.classList.remove('active');
+        } else {
+          list.classList.add('open');
+          el.classList.add('open');
+          // Tandai cluster ini sebagai ACTIVE (beri aksen biru)
+          el.classList.add('active');
+        }
+      }
+
+      function selectCompanyFromSidebar(companyId) {
+        selectedCompanyId = companyId;
+        
+        // Sinkronisasi kelas active ke sidebar list perusahaan
+        document.querySelectorAll('.sidebar-comp-item').forEach(item => {
+          item.classList.remove('active');
+          if (item.getAttribute('data-id') === companyId) {
+            item.classList.add('active');
+            
+            // Pastikan cluster induknya juga tetap .active (aksen biru tetap tampil)
+            const parentList = item.closest('.submenu-container');
+            if (parentList) {
+              const parentClusterEl = parentList.previousElementSibling;
+              if (parentClusterEl && parentClusterEl.classList.contains('modul-item')) {
+                // Hapus active dari semua cluster dulu
+                document.querySelectorAll('#clusterMiniList .modul-item').forEach(c => c.classList.remove('active'));
+                // Set aktif hanya cluster induk dari PT yang dipilih
+                parentClusterEl.classList.add('active');
+                // Pastikan cluster terbuka
+                parentList.classList.add('open');
+                parentClusterEl.classList.add('open');
+              }
+            }
+          }
+        });
+        
+        // Kembali ke dashboard utama agar memperlihatkan panel metrik & detail perusahaan yang baru dipilih!
+        document.getElementById("dashboardRoot").hidden = false;
+        document.getElementById("moduleView").hidden = true;
+        
+        // Sembunyikan sidebar modul secara otomatis jika tidak sedang dipin
+        if (!isModulPinned) {
+          collapseModulSidebar();
+        }
+        
+        // Reset state aktif submenu modul agar konsisten
+        document.querySelectorAll('.modul-list .submenu-item').forEach(item => item.classList.remove('active'));
+        
+        // Redraw content & middle list
+        renderClusters(dashboardData.clusters, dashboardData.companies);
+        renderSelectedCompany();
+      }
+
+      function updateLiveWeather(clusterName) {
+        const coords = {
+          "ntb": { lat: -8.65, lng: 116.32 },
+          "bali": { lat: -8.20, lng: 114.95 },
+          "jawa": { lat: -7.25, lng: 112.75 },
+          "madura": { lat: -7.01, lng: 113.86 },
+          "sulawesi": { lat: -1.25, lng: 122.50 }
+        };
+        
+        const key = String(clusterName || "").toLowerCase().trim();
+        const coord = coords[key] || coords["ntb"];
+        const weatherLoc = document.getElementById("weatherLocation");
+        if (weatherLoc) {
+          weatherLoc.textContent = "📍 " + clusterName;
+        }
+        
+        const url = "https://api.open-meteo.com/v1/forecast?latitude=" + coord.lat + "&longitude=" + coord.lng + "&current=temperature_2m,relative_humidity_2m,weather_code";
+        
+        fetch(url)
+          .then(res => res.json())
+          .then(data => {
+            const current = data.current;
+            if (current) {
+              const temp = Math.round(current.temperature_2m);
+              const hum = current.relative_humidity_2m;
+              const code = current.weather_code;
+              
+              let desc = "Cerah Berawan";
+              let icon = "⛅";
+              
+              if (code === 0) {
+                desc = "Cerah";
+                icon = "☀️";
+              } else if (code === 1 || code === 2) {
+                desc = "Cerah Berawan";
+                icon = "⛅";
+              } else if (code === 3) {
+                desc = "Berawan";
+                icon = "☁️";
+              } else if (code >= 45 && code <= 48) {
+                desc = "Berkabut";
+                icon = "🌫️";
+              } else if (code >= 51 && code <= 55) {
+                desc = "Gerimis";
+                icon = "🌦️";
+              } else if (code >= 61 && code <= 65) {
+                desc = "Hujan";
+                icon = "🌧️";
+              } else if (code >= 80 && code <= 82) {
+                desc = "Hujan Lebat";
+                icon = "🌧️";
+              } else if (code >= 95 && code <= 99) {
+                desc = "Hujan Badai";
+                icon = "⛈️";
+              }
+              
+              const weatherTemp = document.querySelector(".weather-temp");
+              const weatherDesc = document.querySelector(".weather-desc");
+              const weatherIcon = document.querySelector(".weather-icon");
+              const weatherDetails = document.querySelector(".weather-details");
+              
+              if (weatherTemp) weatherTemp.textContent = temp + "°C";
+              if (weatherDesc) weatherDesc.textContent = desc;
+              if (weatherIcon) weatherIcon.textContent = icon;
+              if (weatherDetails) {
+                weatherDetails.innerHTML = 
+                  '<span id="weatherLocation">📍 ' + escapeHtml(clusterName) + '</span>' +
+                  '<span>💧 Hum: ' + hum + '%</span>';
+              }
+            }
+          })
+          .catch(err => {
+            console.error("Error fetching live weather:", err);
+          });
+      }
+      // ────────────────────────────────────────────────────────────────────────
+    
+
+      // Intercept module clicks if no company selected
+      document.addEventListener('DOMContentLoaded', () => {
+        const modulList = document.querySelector('.modul-list');
+        if (modulList) {
+          modulList.addEventListener('click', (e) => {
+            if (!selectedCompanyId) {
+              e.stopPropagation();
+              e.preventDefault();
+              showToast('⚠️ Pilih Cluster dan PT terlebih dahulu sebelum membuka modul!', 'warning');
+            }
+          }, true); // Intercept di fase capture sebelum onclick jalan
+        }
+      });
+
+      // Intercept message from iframe for inner navigation without breaking out
+      window.addEventListener("message", function(event) {
+        if (event.data && event.data.type === "navigate") {
+          const iframe = document.querySelector('iframe[title="Web App View"]');
+          if (iframe) {
+            iframe.src = event.data.url;
+          }
+        }
+      });
+
+    </script>
+  </body>
+</html>
